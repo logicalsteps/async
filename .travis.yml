@@ -13,6 +13,8 @@ matrix:
 
 before_script:
   - composer install --prefer-dist --dev
+  - mkdir -p build/logs
+  - ls -al
 
 after_script:
   - vendor/bin/ocular code-coverage:upload --format=php-clover build/logs/clover.xml
