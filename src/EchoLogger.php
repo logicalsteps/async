@@ -8,6 +8,7 @@ use Psr\Log\AbstractLogger;
 
 class EchoLogger extends AbstractLogger
 {
+    public $consoleColors = true;
 
     /**
      * Logs with an arbitrary level.
@@ -20,6 +21,23 @@ class EchoLogger extends AbstractLogger
      */
     public function log($level, $message, array $context = array())
     {
-        echo "[$level] $message\n";
+        if ($this->consoleColors) {
+            $message = str_replace('await ', $this->lightGrey('await '), $message);
+        }
+        echo $this->cyanBackground("[$level]") . " $message\n";
+    }
+
+    private function cyanBackground(string $text)
+    {
+        if ( ! $this->consoleColors) {
+            return $text;
+        }
+
+        return "\033[0;30m\033[46m{$text}\033[0m";
+    }
+
+    private function lightGrey(string $text)
+    {
+        return "\033[0;37m{$text}\033[0m";
     }
 }
