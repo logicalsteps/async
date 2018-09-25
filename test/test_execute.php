@@ -61,6 +61,7 @@ class Timer
 
 
 $async = new Async();
+$async->setLoop($loop);
 $async->execute(flow(), 'var_dump');
 
 $loop->run();
