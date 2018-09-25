@@ -42,6 +42,11 @@ class Timer
             $call_back(null, true);
         });
     }
+
+    function hold(int $seconds)
+    {
+        yield [$this, 'wait', $seconds];
+    }
 }
 
 function flow()
@@ -53,11 +58,15 @@ function flow()
     echo 'after four seconds' . PHP_EOL;
     yield ['Timer', 'delay', 8];
     echo 'after eight seconds' . PHP_EOL;
-    yield [new Timer(), 'delay', 3];
+    $timer = new Timer();
+    yield [$timer, 'wait', 3];
     echo 'after three seconds' . PHP_EOL;
+    yield $timer->hold(1);
+    echo 'after one second' . PHP_EOL;
 
     return 'completed';
 }
+
 $async = new Async();
 $async->setLoop($loop);
 $async->execute(flow(), 'var_dump');

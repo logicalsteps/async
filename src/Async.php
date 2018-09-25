@@ -6,6 +6,7 @@ use Generator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
+use ReflectionGenerator;
 use Throwable;
 
 class Async implements LoggerAwareInterface
@@ -58,7 +59,7 @@ class Async implements LoggerAwareInterface
                         if (is_array($func)) {
                             $name = $func[0];
                             if (is_object($name)) {
-                                $name = '(new ' . get_class($name) . ')->' . $func[1];
+                                $name = '$' . lcfirst(get_class($name)) . '->' . $func[1];
                             } else {
                                 $name .= '::' . $func[1];
                             }
@@ -80,6 +81,24 @@ class Async implements LoggerAwareInterface
                     };
                     call_user_func_array($func, $args);
                 } elseif ($value instanceof Generator) {
+                    if ($this->logger) {
+                        $info = new ReflectionGenerator($value);
+                        $f    = $info->getFunction();
+                        if ($name = $info->getThis()) {
+                            if (is_object($name)) {
+                                $name = '$' . lcfirst(get_class($name)) . '->' . $f->name;
+                            } else {
+                                $name .= '::' . $f->name;
+                            }
+                        } else {
+                            $name = $f->name;
+                        }
+                        $args = [];
+                        foreach ($f->getParameters() as $parameter) {
+                            $args[] = '$' . $parameter->name;
+                        }
+                        $this->logger->info('await ' . $name . '(' . implode(', ', $args) . ');');
+                    }
                     $this->execute($value, function ($value) use ($flow, $callback) {
                         $flow->send($value);
                         $this->execute($flow, $callback);
