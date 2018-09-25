@@ -19,7 +19,7 @@ class Async implements LoggerAwareInterface
         $this->logger = new EchoLogger();
     }
 
-    function execute(Generator $flow, callable $callback = null)
+    public function execute(Generator $flow, callable $callback = null)
     {
         try {
             if ($flow->valid()) {
@@ -30,24 +30,28 @@ class Async implements LoggerAwareInterface
                     $func[] = array_shift($value);
                     if (is_callable($func[0])) {
                         $func = $func[0];
-                        if ($this->logger) {
-                            $this->logger->info('yield ' . $func . $this->format($value));
-                        }
                     } else {
                         $func[] = array_shift($value);
-                        $object = $func[0];
-                        if (is_object($object)) {
-                            $object = get_class($object);
-                        }
-                        if ($this->logger) {
-                            $this->logger->info('yield ' . $object . '->' . $func[1] . $this->format($value));
-                        }
                     }
                     $args = $value;
                 } else {
                     $func = $value;
                 }
                 if (is_callable($func)) {
+                    if ($this->logger) {
+                        if (is_array($func)) {
+                            $name = $func[0];
+                            if (is_object($name)) {
+                                $name = '(new '.get_class($name) . ')->' . $func[1];
+                            } else {
+                                $name .= '::' . $func[1];
+                            }
+
+                        } else {
+                            $name = (string)$func;
+                        }
+                        $this->logger->info('yield ' . $name . $this->format($args));
+                    }
                     $args[] = function ($error, $result) use ($flow, $callback) {
                         if ($error) {
                             if ($this->logger) {
@@ -108,6 +112,6 @@ class Async implements LoggerAwareInterface
      */
     public function setLogger(LoggerInterface $logger)
     {
-        // TODO: Implement setLogger() method.
+        $this->logger = $logger;
     }
 }
