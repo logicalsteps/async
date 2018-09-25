@@ -5,10 +5,15 @@ namespace LogicalSteps\Async;
 use Generator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
+use React\EventLoop\LoopInterface;
 use Throwable;
 
 class Async implements LoggerAwareInterface
 {
+    /**
+     * @var LoopInterface
+     */
+    protected $loop;
     /**
      * @var LoggerInterface
      */
@@ -20,6 +25,17 @@ class Async implements LoggerAwareInterface
     }
 
     public function execute(Generator $flow, callable $callback = null)
+    {
+        if ($this->loop) {
+            $this->loop->futureTick(function () use ($flow, $callback) {
+                $this->run($flow, $callback);
+            });
+        } else {
+            $this->run($flow, $callback);
+        }
+    }
+
+    private function run(Generator $flow, callable $callback = null)
     {
         try {
             if ($flow->valid()) {
@@ -42,7 +58,7 @@ class Async implements LoggerAwareInterface
                         if (is_array($func)) {
                             $name = $func[0];
                             if (is_object($name)) {
-                                $name = '(new '.get_class($name) . ')->' . $func[1];
+                                $name = '(new ' . get_class($name) . ')->' . $func[1];
                             } else {
                                 $name .= '::' . $func[1];
                             }
@@ -50,7 +66,7 @@ class Async implements LoggerAwareInterface
                         } else {
                             $name = (string)$func;
                         }
-                        $this->logger->info('yield ' . $name . $this->format($args));
+                        $this->logger->info('await ' . $name . $this->format($args));
                     }
                     $args[] = function ($error, $result) use ($flow, $callback) {
                         if ($error) {
@@ -113,5 +129,13 @@ class Async implements LoggerAwareInterface
     public function setLogger(LoggerInterface $logger)
     {
         $this->logger = $logger;
+    }
+
+    /**
+     * @param LoopInterface $loop
+     */
+    public function setLoop(LoopInterface $loop)
+    {
+        $this->loop = $loop;
     }
 }
