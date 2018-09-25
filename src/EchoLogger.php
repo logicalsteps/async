@@ -20,6 +20,6 @@ class EchoLogger extends AbstractLogger
      */
     public function log($level, $message, array $context = array())
     {
-        echo "[$level] $message";
+        echo "[$level] $message\n";
     }
 }
