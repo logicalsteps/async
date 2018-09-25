@@ -46,6 +46,8 @@ class Timer
     function hold(int $seconds)
     {
         yield [$this, 'wait', $seconds];
+
+        return true;
     }
 }
 
@@ -64,7 +66,7 @@ function flow()
     yield $timer->hold(1);
     echo 'after one second' . PHP_EOL;
 
-    return 'completed';
+    return $timer->hold(7);
 }
 
 $async = new Async();

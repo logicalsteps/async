@@ -81,7 +81,7 @@ class Async implements LoggerAwareInterface
                     };
                     call_user_func_array($func, $args);
                 } elseif ($value instanceof Generator) {
-                    if ($this->logger) {
+                    if ($value->valid() && $this->logger) {
                         $info = new ReflectionGenerator($value);
                         $f    = $info->getFunction();
                         if ($name = $info->getThis()) {
@@ -110,6 +110,24 @@ class Async implements LoggerAwareInterface
             } else {
                 $value = $flow->getReturn();
                 if ($value instanceof Generator) {
+                    if ($value->valid() && $this->logger) {
+                        $info = new ReflectionGenerator($value);
+                        $f    = $info->getFunction();
+                        if ($name = $info->getThis()) {
+                            if (is_object($name)) {
+                                $name = '$' . lcfirst(get_class($name)) . '->' . $f->name;
+                            } else {
+                                $name .= '::' . $f->name;
+                            }
+                        } else {
+                            $name = $f->name;
+                        }
+                        $args = [];
+                        foreach ($f->getParameters() as $parameter) {
+                            $args[] = '$' . $parameter->name;
+                        }
+                        $this->logger->info('await ' . $name . '(' . implode(', ', $args) . ');');
+                    }
                     $this->execute($value, $callback);
                 } elseif (is_callable($callback)) {
                     $callback($value);
