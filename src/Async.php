@@ -38,7 +38,6 @@ class Async implements LoggerAwareInterface
 
     private function run(Generator $flow, callable $callback = null, int $depth = 0)
     {
-        $depth++;
         try {
             if ($flow->valid()) {
                 $value = $flow->current();
@@ -68,7 +67,7 @@ class Async implements LoggerAwareInterface
                         } else {
                             $name = (string)$func;
                         }
-                        $this->logger->info('await ' . $name . $this->format($args));
+                        $this->logger->info('await ' . $name . $this->format($args), compact('depth'));
                     }
                     $args[] = function ($error, $result) use ($flow, $callback, $depth) {
                         if ($error) {
@@ -101,12 +100,12 @@ class Async implements LoggerAwareInterface
                         foreach ($f->getParameters() as $parameter) {
                             $args[] = '$' . $parameter->name;
                         }
-                        $this->logger->info('await ' . $name . '(' . implode(', ', $args) . ');');
+                        $this->logger->info('await ' . $name . '(' . implode(', ', $args) . ');', compact('depth'));
                     }
                     $this->execute($value, function ($value) use ($flow, $callback, $depth) {
                         $flow->send($value);
-                        $this->execute($flow, $callback, 1 + $depth);
-                    }, $depth);
+                        $this->execute($flow, $callback, $depth);
+                    }, $depth + 1);
                 } else {
                     $flow->send($value);
                     $this->execute($flow, $callback, $depth);
@@ -130,9 +129,9 @@ class Async implements LoggerAwareInterface
                         foreach ($f->getParameters() as $parameter) {
                             $args[] = '$' . $parameter->name;
                         }
-                        $this->logger->info('await ' . $name . '(' . implode(', ', $args) . ');');
+                        $this->logger->info('await ' . $name . '(' . implode(', ', $args) . ');', compact('depth'));
                     }
-                    $this->execute($value, $callback);
+                    $this->execute($value, $callback, $depth+1);
                 } elseif (is_callable($callback)) {
                     $callback(null, $value);
                 }
