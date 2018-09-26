@@ -2,6 +2,7 @@
 
 namespace LogicalSteps\Async;
 
+use function foo\func;
 use Generator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
@@ -25,18 +26,33 @@ class Async implements LoggerAwareInterface
         $this->logger = new EchoLogger();
     }
 
-    public function execute(Generator $flow, callable $callback = null, int $depth = 0)
+    public function execute(Generator $flow, callable $callback = null)
+    {
+        $this->logger->info('start');
+        $wrapped_callback = function ($error, $result) use ($callback) {
+            if ($this->logger) {
+                $this->logger->info('end');
+            }
+            if (is_callable($callback)) {
+                $callback($error, $result);
+            }
+        };
+        $this->_execute($flow, $wrapped_callback);
+
+    }
+
+    private function _execute(Generator $flow, callable $callback = null, int $depth = 0)
     {
         if ($this->loop) {
             $this->loop->futureTick(function () use ($flow, $callback, $depth) {
-                $this->run($flow, $callback, $depth);
+                $this->_run($flow, $callback, $depth);
             });
         } else {
-            $this->run($flow, $callback, $depth);
+            $this->_run($flow, $callback, $depth);
         }
     }
 
-    private function run(Generator $flow, callable $callback = null, int $depth = 0)
+    private function _run(Generator $flow, callable $callback = null, int $depth = 0)
     {
         try {
             if ($flow->valid()) {
@@ -80,7 +96,7 @@ class Async implements LoggerAwareInterface
                             return;
                         }
                         $flow->send($result);
-                        $this->execute($flow, $callback, $depth);
+                        $this->_execute($flow, $callback, $depth);
                     };
                     call_user_func_array($func, $args);
                 } elseif ($value instanceof Generator) {
@@ -102,13 +118,13 @@ class Async implements LoggerAwareInterface
                         }
                         $this->logger->info('await ' . $name . '(' . implode(', ', $args) . ');', compact('depth'));
                     }
-                    $this->execute($value, function ($value) use ($flow, $callback, $depth) {
+                    $this->_execute($value, function ($value) use ($flow, $callback, $depth) {
                         $flow->send($value);
-                        $this->execute($flow, $callback, $depth);
+                        $this->_execute($flow, $callback, $depth);
                     }, $depth + 1);
                 } else {
                     $flow->send($value);
-                    $this->execute($flow, $callback, $depth);
+                    $this->_execute($flow, $callback, $depth);
                 }
             } else {
                 $value = $flow->getReturn();
@@ -131,14 +147,14 @@ class Async implements LoggerAwareInterface
                         }
                         $this->logger->info('await ' . $name . '(' . implode(', ', $args) . ');', compact('depth'));
                     }
-                    $this->execute($value, $callback, $depth+1);
+                    $this->_execute($value, $callback, $depth + 1);
                 } elseif (is_callable($callback)) {
                     $callback(null, $value);
                 }
             }
         } catch (Throwable $t) {
             $flow->throw($t);
-            $this->execute($flow);
+            $this->_execute($flow);
         }
     }
 
