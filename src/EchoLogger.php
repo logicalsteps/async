@@ -25,7 +25,7 @@ class EchoLogger extends AbstractLogger
             $message = str_replace('await ', $this->lightGrey('await '), $message);
         }
         $depth = $context['depth'] ?? 0;
-        $depth = str_pad(' ', $depth * 4);
+        $depth = $depth ? ' │'.str_repeat(" ", $depth) . '├ ' : ' ├ ';
         echo $this->cyanBackground("[$level]") . $depth . "$message\n";
     }
 
