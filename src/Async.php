@@ -25,19 +25,20 @@ class Async implements LoggerAwareInterface
         $this->logger = new EchoLogger();
     }
 
-    public function execute(Generator $flow, callable $callback = null)
+    public function execute(Generator $flow, callable $callback = null, int $depth = 0)
     {
         if ($this->loop) {
-            $this->loop->futureTick(function () use ($flow, $callback) {
-                $this->run($flow, $callback);
+            $this->loop->futureTick(function () use ($flow, $callback, $depth) {
+                $this->run($flow, $callback, $depth);
             });
         } else {
-            $this->run($flow, $callback);
+            $this->run($flow, $callback, $depth);
         }
     }
 
-    private function run(Generator $flow, callable $callback = null)
+    private function run(Generator $flow, callable $callback = null, int $depth = 0)
     {
+        $depth++;
         try {
             if ($flow->valid()) {
                 $value = $flow->current();
@@ -69,7 +70,7 @@ class Async implements LoggerAwareInterface
                         }
                         $this->logger->info('await ' . $name . $this->format($args));
                     }
-                    $args[] = function ($error, $result) use ($flow, $callback) {
+                    $args[] = function ($error, $result) use ($flow, $callback, $depth) {
                         if ($error) {
                             if ($this->logger) {
                                 $this->logger->error((string)$error);
@@ -80,7 +81,7 @@ class Async implements LoggerAwareInterface
                             return;
                         }
                         $flow->send($result);
-                        $this->execute($flow, $callback);
+                        $this->execute($flow, $callback, $depth);
                     };
                     call_user_func_array($func, $args);
                 } elseif ($value instanceof Generator) {
@@ -102,13 +103,13 @@ class Async implements LoggerAwareInterface
                         }
                         $this->logger->info('await ' . $name . '(' . implode(', ', $args) . ');');
                     }
-                    $this->execute($value, function ($value) use ($flow, $callback) {
+                    $this->execute($value, function ($value) use ($flow, $callback, $depth) {
                         $flow->send($value);
-                        $this->execute($flow, $callback);
-                    });
+                        $this->execute($flow, $callback, 1 + $depth);
+                    }, $depth);
                 } else {
                     $flow->send($value);
-                    $this->execute($flow);
+                    $this->execute($flow, $callback, $depth);
                 }
             } else {
                 $value = $flow->getReturn();
