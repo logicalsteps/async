@@ -8,14 +8,21 @@ use Psr\Log\AbstractLogger;
 
 class EchoLogger extends AbstractLogger
 {
+    private $startTime;
+
+    public function __construct()
+    {
+        $this->startTime = microtime(true);
+    }
+
     public $consoleColors = true;
 
     /**
      * Logs with an arbitrary level.
      *
-     * @param mixed $level
+     * @param mixed  $level
      * @param string $message
-     * @param array $context
+     * @param array  $context
      *
      * @return void
      */
@@ -32,16 +39,18 @@ class EchoLogger extends AbstractLogger
                 if ($this->consoleColors) {
                     $message = str_replace('await ', $this->lightGrey('await '), $message);
                 }
-                $depth = $context['depth'] ?? 0;
-                $depth = $depth ? ' │' . str_repeat(" ", $depth) . '├ ' : ' ├ ';
+                $depth   = $context['depth'] ?? 0;
+                $depth   = $depth ? ' │' . str_repeat(" ", $depth) . '├ ' : ' ├ ';
                 $message = $depth . $message;
         }
-        echo $this->cyanBackground("[$level]") . $message . PHP_EOL;
+        $elapsed = round((microtime(true) - $this->startTime));
+        echo ' ' . str_pad((string)$elapsed, 5, '0', STR_PAD_LEFT)
+             . ' ' . $this->cyanBackground("[$level]") . $message . PHP_EOL;
     }
 
     private function cyanBackground(string $text)
     {
-        if (!$this->consoleColors) {
+        if ( ! $this->consoleColors) {
             return $text;
         }
 
