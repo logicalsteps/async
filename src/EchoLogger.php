@@ -13,9 +13,9 @@ class EchoLogger extends AbstractLogger
     /**
      * Logs with an arbitrary level.
      *
-     * @param mixed  $level
+     * @param mixed $level
      * @param string $message
-     * @param array  $context
+     * @param array $context
      *
      * @return void
      */
@@ -24,12 +24,14 @@ class EchoLogger extends AbstractLogger
         if ($this->consoleColors) {
             $message = str_replace('await ', $this->lightGrey('await '), $message);
         }
-        echo $this->cyanBackground("[$level]") . " $message\n";
+        $depth = $context['depth'] ?? 0;
+        $depth = str_pad(' ', $depth * 4);
+        echo $this->cyanBackground("[$level]") . $depth . "$message\n";
     }
 
     private function cyanBackground(string $text)
     {
-        if ( ! $this->consoleColors) {
+        if (!$this->consoleColors) {
             return $text;
         }
 
