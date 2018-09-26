@@ -54,59 +54,7 @@ class Async implements LoggerAwareInterface
     private function _run(Generator $flow, callable $callback = null, int $depth = 0)
     {
         try {
-            if ($flow->valid()) {
-                $value = $flow->current();
-                $args  = [];
-                $func  = [];
-                if (is_array($value) && count($value) > 1) {
-                    $func[] = array_shift($value);
-                    if (is_callable($func[0])) {
-                        $func = $func[0];
-                    } else {
-                        $func[] = array_shift($value);
-                    }
-                    $args = $value;
-                } else {
-                    $func = $value;
-                }
-                if (is_callable($func)) {
-                    $this->logCallable($func, $args, $depth);
-                    $args[] = function ($error, $result) use ($flow, $callback, $depth) {
-                        if ($error) {
-                            if ($this->logger) {
-                                $this->logger->error((string)$error);
-                            }
-                            if (is_callable($callback)) {
-                                $callback($error);
-                            }
-
-                            return;
-                        }
-                        $flow->send($result);
-                        $this->_execute($flow, $callback, $depth);
-                    };
-                    call_user_func_array($func, $args);
-                } elseif ($value instanceof Generator) {
-                    $this->logGenerator($value, $depth);
-                    $this->_execute($value, function ($error, $result) use ($flow, $callback, $depth) {
-                        if ($error) {
-                            if ($this->logger) {
-                                $this->logger->error((string)$error);
-                            }
-                            if (is_callable($callback)) {
-                                $callback($error);
-                            }
-
-                            return;
-                        }
-                        $flow->send($result);
-                        $this->_execute($flow, $callback, $depth);
-                    }, $depth + 1);
-                } else {
-                    $flow->send($value);
-                    $this->_execute($flow, $callback, $depth);
-                }
-            } else {
+            if (!$flow->valid()) {
                 $value = $flow->getReturn();
                 if ($value instanceof Generator) {
                     $this->logGenerator($value, $depth);
@@ -114,7 +62,60 @@ class Async implements LoggerAwareInterface
                 } elseif (is_callable($callback)) {
                     $callback(null, $value);
                 }
+                return;
             }
+            $value = $flow->current();
+            $args = [];
+            $func = [];
+            if (is_array($value) && count($value) > 1) {
+                $func[] = array_shift($value);
+                if (is_callable($func[0])) {
+                    $func = $func[0];
+                } else {
+                    $func[] = array_shift($value);
+                }
+                $args = $value;
+            } else {
+                $func = $value;
+            }
+            if (is_callable($func)) {
+                $this->logCallable($func, $args, $depth);
+                $args[] = function ($error, $result) use ($flow, $callback, $depth) {
+                    if ($error) {
+                        if ($this->logger) {
+                            $this->logger->error((string)$error);
+                        }
+                        if (is_callable($callback)) {
+                            $callback($error);
+                        }
+
+                        return;
+                    }
+                    $flow->send($result);
+                    $this->_execute($flow, $callback, $depth);
+                };
+                call_user_func_array($func, $args);
+            } elseif ($value instanceof Generator) {
+                $this->logGenerator($value, $depth);
+                $this->_execute($value, function ($error, $result) use ($flow, $callback, $depth) {
+                    if ($error) {
+                        if ($this->logger) {
+                            $this->logger->error((string)$error);
+                        }
+                        if (is_callable($callback)) {
+                            $callback($error);
+                        }
+
+                        return;
+                    }
+                    $flow->send($result);
+                    $this->_execute($flow, $callback, $depth);
+                }, $depth + 1);
+            } else {
+                $flow->send($value);
+                $this->_execute($flow, $callback, $depth);
+            }
+            
         } catch (Throwable $t) {
             $flow->throw($t);
             $this->_execute($flow);
@@ -123,7 +124,7 @@ class Async implements LoggerAwareInterface
 
     private function logCallable(callable $callable, array $arguments, int $depth = 0)
     {
-        if ( ! $this->logger) {
+        if (!$this->logger) {
             return;
         }
         if (is_array($callable)) {
@@ -143,11 +144,11 @@ class Async implements LoggerAwareInterface
 
     private function logGenerator(Generator $generator, int $depth = 0)
     {
-        if ( ! $generator->valid() || ! $this->logger) {
+        if (!$generator->valid() || !$this->logger) {
             return;
         }
         $info = new ReflectionGenerator($generator);
-        $f    = $info->getFunction();
+        $f = $info->getFunction();
         if ($name = $info->getThis()) {
             if (is_object($name)) {
                 $name = '$' . lcfirst(get_class($name)) . '->' . $f->name;
