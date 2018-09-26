@@ -21,12 +21,22 @@ class EchoLogger extends AbstractLogger
      */
     public function log($level, $message, array $context = array())
     {
-        if ($this->consoleColors) {
-            $message = str_replace('await ', $this->lightGrey('await '), $message);
+        switch ($message) {
+            case 'start':
+                $message = ' ┌ ⚑ start';
+                break;
+            case 'end':
+                $message = ' └ ■ stop';
+                break;
+            default:
+                if ($this->consoleColors) {
+                    $message = str_replace('await ', $this->lightGrey('await '), $message);
+                }
+                $depth = $context['depth'] ?? 0;
+                $depth = $depth ? ' │' . str_repeat(" ", $depth) . '├ ' : ' ├ ';
+                $message = $depth . $message;
         }
-        $depth = $context['depth'] ?? 0;
-        $depth = $depth ? ' │'.str_repeat(" ", $depth) . '├ ' : ' ├ ';
-        echo $this->cyanBackground("[$level]") . $depth . "$message\n";
+        echo $this->cyanBackground("[$level]") . $message . PHP_EOL;
     }
 
     private function cyanBackground(string $text)
