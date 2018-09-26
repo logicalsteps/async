@@ -41,8 +41,8 @@ class Async implements LoggerAwareInterface
         try {
             if ($flow->valid()) {
                 $value = $flow->current();
-                $args  = [];
-                $func  = [];
+                $args = [];
+                $func = [];
                 if (is_array($value) && count($value) > 1) {
                     $func[] = array_shift($value);
                     if (is_callable($func[0])) {
@@ -74,7 +74,10 @@ class Async implements LoggerAwareInterface
                             if ($this->logger) {
                                 $this->logger->error((string)$error);
                             }
-                            throw $error;
+                            if (is_callable($callback)) {
+                                $callback($error);
+                            }
+                            return;
                         }
                         $flow->send($result);
                         $this->execute($flow, $callback);
@@ -83,7 +86,7 @@ class Async implements LoggerAwareInterface
                 } elseif ($value instanceof Generator) {
                     if ($value->valid() && $this->logger) {
                         $info = new ReflectionGenerator($value);
-                        $f    = $info->getFunction();
+                        $f = $info->getFunction();
                         if ($name = $info->getThis()) {
                             if (is_object($name)) {
                                 $name = '$' . lcfirst(get_class($name)) . '->' . $f->name;
@@ -112,7 +115,7 @@ class Async implements LoggerAwareInterface
                 if ($value instanceof Generator) {
                     if ($value->valid() && $this->logger) {
                         $info = new ReflectionGenerator($value);
-                        $f    = $info->getFunction();
+                        $f = $info->getFunction();
                         if ($name = $info->getThis()) {
                             if (is_object($name)) {
                                 $name = '$' . lcfirst(get_class($name)) . '->' . $f->name;
@@ -130,7 +133,7 @@ class Async implements LoggerAwareInterface
                     }
                     $this->execute($value, $callback);
                 } elseif (is_callable($callback)) {
-                    $callback($value);
+                    $callback(null, $value);
                 }
             }
         } catch (Throwable $t) {
