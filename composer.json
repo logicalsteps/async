@@ -16,7 +16,8 @@
     "require": {
         "php": ">=7.0",
         "psr/log": "^1.0",
-        "ext-json": "*"
+        "ext-json": "*",
+        "react/promise": "^2.7"
     },
     "require-dev": {
         "pdepend/pdepend": "~2.5",

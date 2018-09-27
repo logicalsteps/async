@@ -6,6 +6,9 @@ use Generator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
+use React\Promise\Deferred;
+use React\Promise\Promise;
+use React\Promise\PromiseInterface;
 use ReflectionGenerator;
 use Throwable;
 
@@ -23,6 +26,18 @@ class Async implements LoggerAwareInterface
     public function __construct()
     {
         $this->logger = new EchoLogger();
+    }
+
+    public function promise(Generator $flow): Promise
+    {
+        $deferred = new Deferred();
+        $this->execute($flow, function ($error, $result) use ($deferred) {
+            if ($error) {
+                return $deferred->reject($error);
+            }
+            $deferred->resolve($result);
+        });
+        return $deferred->promise();
     }
 
     public function execute(Generator $flow, callable $callback = null)
@@ -115,7 +130,7 @@ class Async implements LoggerAwareInterface
                 $flow->send($value);
                 $this->_execute($flow, $callback, $depth);
             }
-            
+
         } catch (Throwable $t) {
             $flow->throw($t);
             $this->_execute($flow);
