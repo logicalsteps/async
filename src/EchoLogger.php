@@ -18,14 +18,14 @@ class EchoLogger extends AbstractLogger
         'blue' => 34,
         'magenta' => 35,
         'cyan' => 36,
-        'lightGrey' => 37,
+        'brightGrey' => 37,
         'grey' => 90,
-        'lightRed' => 91,
-        'lightGreen' => 92,
-        'lightYellow' => 93,
-        'lightBlue' => 94,
-        'lightMagenta' => 95,
-        'lightCyan' => 96,
+        'brightRed' => 91,
+        'brightGreen' => 92,
+        'brightYellow' => 93,
+        'brightBlue' => 94,
+        'brightMagenta' => 95,
+        'brightCyan' => 96,
         'white' => 97
     ];
 
@@ -52,16 +52,16 @@ class EchoLogger extends AbstractLogger
                 $message = ' ┌▀' . $this->backgroundColor(' start ', 'green');
                 break;
             case 'end':
-                $message = ' └▄' . $this->backgroundColor(' stop ', 'lightRed');
+                $message = ' └▄' . $this->backgroundColor(' stop ', 'brightRed');
                 break;
             default:
                 if ($this->consoleColors) {
-                    $message = str_replace('await ', $this->color('await ', 'lightGrey'), $message);
+                    $message = str_replace('await ', $this->color('await ', 'brightGrey'), $message);
                 }
                 $depth = $context['depth'] ?? 0;
                 $depth = $depth
                     ? ' │' . str_repeat(" ", $depth * 2) . $this->color('¤ ', 'yellow')
-                    : ' ├' . $this->color('» ', 'lightYellow');
+                    : ' ├' . $this->color('» ', 'brightYellow');
                 $message = $depth . $message;
         }
         $elapsed = round((microtime(true) - $this->startTime));
