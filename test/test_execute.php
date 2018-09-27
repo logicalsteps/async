@@ -53,18 +53,18 @@ class Timer
 
 function flow()
 {
-    echo 'started' . PHP_EOL;
+    //echo 'started' . PHP_EOL;
     yield 'two_seconds';
-    echo 'after two seconds' . PHP_EOL;
+    //echo 'after two seconds' . PHP_EOL;
     yield 'four_seconds';
-    echo 'after four seconds' . PHP_EOL;
+    //echo 'after four seconds' . PHP_EOL;
     yield ['Timer', 'delay', 8];
-    echo 'after eight seconds' . PHP_EOL;
+    //echo 'after eight seconds' . PHP_EOL;
     $timer = new Timer();
     yield [$timer, 'wait', 3];
-    echo 'after three seconds' . PHP_EOL;
+    //echo 'after three seconds' . PHP_EOL;
     yield $timer->hold(1);
-    echo 'after one second' . PHP_EOL;
+    //echo 'after one second' . PHP_EOL;
 
     return $timer->hold(7);
 }
