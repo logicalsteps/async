@@ -26,7 +26,8 @@
         "phpunit/phpunit": "~7.3",
         "scrutinizer/ocular": "~1.5",
         "sebastian/phpcpd": "~4.1",
-        "react/event-loop": "~1.0"
+        "react/event-loop": "~1.0",
+        "psy/psysh": "@stable"
     },
     "autoload": {
         "psr-4": {
@@ -37,5 +38,8 @@
         "psr-4": {
             "LogicalSteps\\Async\\Test\\": "test/"
         }
+    },
+    "config": {
+        "bin-dir": "./"
     }
 }
