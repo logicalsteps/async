@@ -2,3 +2,12 @@
 /composer.lock
 /vendor
 .idea
+ocular
+pdepend
+php-parse
+phpcpd
+phploc
+phpmd
+phpunit
+psysh
+var-dump-server
