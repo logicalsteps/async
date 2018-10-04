@@ -14,6 +14,7 @@ use Throwable;
 class Async implements LoggerAwareInterface
 {
     const PROMISE_REACT = 'React\Promise\PromiseInterface';
+    const PROMISE_GUZZLE = 'GuzzleHttp\Promise\PromiseInterface';
     /**
      * @var LoopInterface
      */
@@ -70,7 +71,7 @@ class Async implements LoggerAwareInterface
     private function _run(Generator $flow, callable $callback = null, int $depth = 0)
     {
         try {
-            if ( ! $flow->valid()) {
+            if (!$flow->valid()) {
                 $value = $flow->getReturn();
                 if ($value instanceof Generator) {
                     $this->logGenerator($value, $depth);
@@ -82,8 +83,8 @@ class Async implements LoggerAwareInterface
                 return;
             }
             $value = $flow->current();
-            $args  = [];
-            $func  = [];
+            $args = [];
+            $func = [];
             if (is_array($value) && count($value) > 1) {
                 $func[] = array_shift($value);
                 if (is_callable($func[0])) {
@@ -113,23 +114,10 @@ class Async implements LoggerAwareInterface
                 };
                 call_user_func_array($func, $args);
             } elseif (is_a($value, static::PROMISE_REACT)) {
-                if ($this->logger) {
-                    $this->logger->info('await $promise;');
-                }
-                $value->then(
-                    function ($result) use ($flow, $callback, $depth) {
-                        $flow->send($result);
-                        $this->_execute($flow, $callback, $depth);
-                    },
-                    function ($error) use ($callback, $depth) {
-                        if ($this->logger) {
-                            $this->logger->error((string)$error, compact('depth'));
-                        }
-                        if (is_callable($callback)) {
-                            $callback($error);
-                        }
-                    }
-                );
+                $this->handlePromise($flow, $callback, $depth, $value);
+            } elseif (is_a($value, static::PROMISE_GUZZLE)) {
+                $this->handlePromise($flow, $callback, $depth, $value);
+                $value->wait();
             } elseif ($value instanceof Generator) {
                 $this->logGenerator($value, $depth);
                 $this->_execute($value, function ($error, $result) use ($flow, $callback, $depth) {
@@ -158,9 +146,38 @@ class Async implements LoggerAwareInterface
         }
     }
 
+    /**
+     * Handle known promise interfaces
+     *
+     * @param Generator $flow
+     * @param callable $callback
+     * @param int $depth
+     * @param React\Promise\PromiseInterface|GuzzleHttp\Promise\PromiseInterface $value
+     */
+    private function handlePromise(Generator $flow, callable $callback, int $depth, $value)
+    {
+        if ($this->logger) {
+            $this->logger->info('await $promise;');
+        }
+        $value->then(
+            function ($result) use ($flow, $callback, $depth) {
+                $flow->send($result);
+                $this->_execute($flow, $callback, $depth);
+            },
+            function ($error) use ($callback, $depth) {
+                if ($this->logger) {
+                    $this->logger->error((string)$error, compact('depth'));
+                }
+                if (is_callable($callback)) {
+                    $callback($error);
+                }
+            }
+        );
+    }
+
     private function logCallable(callable $callable, array $arguments, int $depth = 0)
     {
-        if ( ! $this->logger) {
+        if (!$this->logger) {
             return;
         }
         if (is_array($callable)) {
@@ -180,11 +197,11 @@ class Async implements LoggerAwareInterface
 
     private function logGenerator(Generator $generator, int $depth = 0)
     {
-        if ( ! $generator->valid() || ! $this->logger) {
+        if (!$generator->valid() || !$this->logger) {
             return;
         }
         $info = new ReflectionGenerator($generator);
-        $f    = $info->getFunction();
+        $f = $info->getFunction();
         if ($name = $info->getThis()) {
             if (is_object($name)) {
                 $name = '$' . lcfirst(get_class($name)) . '->' . $f->name;
