@@ -8,12 +8,12 @@ use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
 use React\Promise\Promise;
-use React\Promise\PromiseInterface;
 use ReflectionGenerator;
 use Throwable;
 
 class Async implements LoggerAwareInterface
 {
+    const PROMISE_REACT = 'React\Promise\PromiseInterface';
     /**
      * @var LoopInterface
      */
@@ -112,7 +112,7 @@ class Async implements LoggerAwareInterface
                     $this->_execute($flow, $callback, $depth);
                 };
                 call_user_func_array($func, $args);
-            } elseif ($value instanceof PromiseInterface) {
+            } elseif (is_a($value, static::PROMISE_REACT)) {
                 if ($this->logger) {
                     $this->logger->info('await $promise;');
                 }
