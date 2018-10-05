@@ -152,7 +152,7 @@ class Async implements LoggerAwareInterface
      * @param Generator $flow
      * @param callable $callback
      * @param int $depth
-     * @param React\Promise\PromiseInterface|GuzzleHttp\Promise\PromiseInterface $value
+     * @param \React\Promise\PromiseInterface|\GuzzleHttp\Promise\PromiseInterface $value
      */
     private function handlePromise(Generator $flow, callable $callback, int $depth, $value)
     {
