@@ -15,6 +15,7 @@ class Async implements LoggerAwareInterface
 {
     const PROMISE_REACT = 'React\Promise\PromiseInterface';
     const PROMISE_GUZZLE = 'GuzzleHttp\Promise\PromiseInterface';
+    const PROMISE_AMP = 'Amp\Promise';
     /**
      * @var LoopInterface
      */
@@ -118,6 +119,26 @@ class Async implements LoggerAwareInterface
             } elseif (is_a($value, static::PROMISE_GUZZLE)) {
                 $this->handlePromise($flow, $callback, $depth, $value);
                 $value->wait();
+            } elseif (is_a($value, static::PROMISE_AMP)) {
+                if ($this->logger) {
+                    $this->logger->info('await $promise;');
+                }
+                $value->onResolve(
+                    function ($error, $result) use ($flow, $callback, $depth) {
+                        if ($error) {
+                            if ($this->logger) {
+                                $this->logger->error((string)$error);
+                            }
+                            if (is_callable($callback)) {
+                                $callback($error);
+                            }
+
+                            return;
+                        }
+                        $flow->send($result);
+                        $this->_execute($flow, $callback, $depth);
+                    }
+                );
             } elseif ($value instanceof Generator) {
                 $this->logGenerator($value, $depth);
                 $this->_execute($value, function ($error, $result) use ($flow, $callback, $depth) {
