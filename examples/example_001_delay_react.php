@@ -5,7 +5,7 @@ use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
 
-require __DIR__ . '/bootstrap.php';
+require __DIR__ . '/../vendor/autoload.php';
 
 /** @var LoopInterface $loop */
 $loop = Factory::create();

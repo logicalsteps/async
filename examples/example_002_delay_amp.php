@@ -4,7 +4,7 @@ use Amp\Deferred;
 use LogicalSteps\Async\Async;
 use Amp\Loop;
 
-require __DIR__ . '/bootstrap.php';
+require __DIR__ . '/../vendor/autoload.php';
 
 function two_seconds(callable $call_back)
 {
