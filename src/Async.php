@@ -114,6 +114,22 @@ class Async implements LoggerAwareInterface
                     $this->_execute($flow, $callback, $depth);
                 };
                 call_user_func_array($func, $args);
+            } elseif ($value instanceof Generator) {
+                $this->logGenerator($value, $depth);
+                $this->_execute($value, function ($error, $result) use ($flow, $callback, $depth) {
+                    if ($error) {
+                        if ($this->logger) {
+                            $this->logger->error((string)$error);
+                        }
+                        if (is_callable($callback)) {
+                            $callback($error);
+                        }
+
+                        return;
+                    }
+                    $flow->send($result);
+                    $this->_execute($flow, $callback, $depth);
+                }, $depth + 1);
             } elseif (is_a($value, static::PROMISE_REACT)) {
                 $this->handlePromise($flow, $callback, $depth, $value);
             } elseif (is_a($value, static::PROMISE_GUZZLE)) {
@@ -139,22 +155,6 @@ class Async implements LoggerAwareInterface
                         $this->_execute($flow, $callback, $depth);
                     }
                 );
-            } elseif ($value instanceof Generator) {
-                $this->logGenerator($value, $depth);
-                $this->_execute($value, function ($error, $result) use ($flow, $callback, $depth) {
-                    if ($error) {
-                        if ($this->logger) {
-                            $this->logger->error((string)$error);
-                        }
-                        if (is_callable($callback)) {
-                            $callback($error);
-                        }
-
-                        return;
-                    }
-                    $flow->send($result);
-                    $this->_execute($flow, $callback, $depth);
-                }, $depth + 1);
             } else {
                 $flow->send($value);
                 $this->_execute($flow, $callback, $depth);
