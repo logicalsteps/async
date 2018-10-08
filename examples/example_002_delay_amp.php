@@ -65,7 +65,9 @@ function flow()
 }
 
 $async = new Async();
+$async->useAmpLoop();
 $async->execute(flow());
+//$async->execute(flow()); //run another session in parallel
 
 Loop::run();
 
