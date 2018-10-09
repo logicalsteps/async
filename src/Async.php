@@ -15,6 +15,7 @@ class Async implements LoggerAwareInterface
 {
     const PROMISE_REACT = 'React\Promise\PromiseInterface';
     const PROMISE_GUZZLE = 'GuzzleHttp\Promise\PromiseInterface';
+    const PROMISE_HTTP = 'Http\Promise\Promise';
     const PROMISE_AMP = 'Amp\Promise';
     /**
      * @var LoopInterface
@@ -148,7 +149,7 @@ class Async implements LoggerAwareInterface
                 }, $depth + 1);
             } elseif (is_a($value, static::PROMISE_REACT)) {
                 $this->handlePromise($flow, $callback, $depth, $value);
-            } elseif (is_a($value, static::PROMISE_GUZZLE)) {
+            } elseif (is_a($value, static::PROMISE_GUZZLE) || is_a($value, static::PROMISE_HTTP)) {
                 $this->handlePromise($flow, $callback, $depth, $value);
                 $value->wait();
             } elseif (is_a($value, static::PROMISE_AMP)) {
@@ -294,7 +295,8 @@ class Async implements LoggerAwareInterface
         $this->exec = [$this, '_executeReactLoop'];
     }
 
-    public function useAmpLoop(){
+    public function useAmpLoop()
+    {
         $this->exec = [$this, '_executeAmpLoop'];
     }
 }
