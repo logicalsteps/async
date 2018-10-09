@@ -28,7 +28,8 @@
         "sebastian/phpcpd": "~4.1",
         "react/event-loop": "~1.0",
         "psy/psysh": "@stable",
-        "amphp/amp": "^2.0"
+        "amphp/amp": "^2.0",
+        "php-http/curl-client": "^1.7"
     },
     "autoload": {
         "psr-4": {
