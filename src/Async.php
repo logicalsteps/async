@@ -2,6 +2,8 @@
 
 namespace LogicalSteps\Async;
 
+use Closure;
+use Error;
 use Generator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
@@ -227,7 +229,13 @@ class Async implements LoggerAwareInterface
             }
 
         } else {
-            $name = (string)$callable;
+            if (is_string($callable)) {
+                $name = $callable;
+            } elseif ($callable instanceof Closure) {
+                $name = 'closure';
+            } else {
+                $name = 'callable';
+            }
         }
         $this->logger->info('await ' . $name . $this->format($arguments), compact('depth'));
 
