@@ -29,7 +29,8 @@
         "react/event-loop": "~1.0",
         "psy/psysh": "@stable",
         "amphp/amp": "^2.0",
-        "php-http/curl-client": "^1.7"
+        "php-http/curl-client": "^1.7",
+        "clue/buzz-react": "^2.4"
     },
     "autoload": {
         "psr-4": {
