@@ -151,7 +151,7 @@ class Async implements LoggerAwareInterface
                 $this->handlePromise($flow, $callback, $depth, $value);
             } elseif (is_a($value, static::PROMISE_GUZZLE) || is_a($value, static::PROMISE_HTTP)) {
                 $this->handlePromise($flow, $callback, $depth, $value);
-                $value->wait();
+                $value->wait(false);
             } elseif (is_a($value, static::PROMISE_AMP)) {
                 if ($this->logger) {
                     $this->logger->info('await $promise;');
