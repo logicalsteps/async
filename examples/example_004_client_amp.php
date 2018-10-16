@@ -3,6 +3,7 @@
 use Amp\Artax\DefaultClient;
 use Amp\Loop;
 use LogicalSteps\Async\Async;
+use LogicalSteps\Async\EchoLogger;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -22,7 +23,7 @@ $status = function ($url) use ($client) {
     $response = yield $client->request($url);
     return $response->getStatus();
 };
-$async = new Async();
+$async = new Async(new EchoLogger());
 $async->useAmpLoop();
 $async->execute($status('http://httpbin.org/get'), 'trace');
 $async->execute($status('http://httpbin.org/missingPage'), 'trace');

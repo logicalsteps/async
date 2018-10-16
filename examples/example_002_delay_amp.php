@@ -1,8 +1,9 @@
 <?php
 
 use Amp\Deferred;
-use LogicalSteps\Async\Async;
 use Amp\Loop;
+use LogicalSteps\Async\Async;
+use LogicalSteps\Async\EchoLogger;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -64,7 +65,7 @@ function flow()
     return $timer->hold(7);
 }
 
-$async = new Async();
+$async = new Async(new EchoLogger());
 $async->useAmpLoop();
 $async->execute(flow());
 //$async->execute(flow()); //run another session in parallel

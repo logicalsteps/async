@@ -3,14 +3,12 @@
 namespace LogicalSteps\Async;
 
 use Closure;
-use Error;
 use Generator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
 use React\Promise\Promise;
-use ReflectionFunction;
 use ReflectionFunctionAbstract;
 use ReflectionGenerator;
 use ReflectionMethod;
@@ -36,9 +34,11 @@ class Async implements LoggerAwareInterface
      */
     protected $exec;
 
-    public function __construct()
+    public function __construct(LoggerInterface $logger = null)
     {
-        $this->logger = new EchoLogger();
+        if ($logger) {
+            $this->logger = $logger;
+        }
         $this->exec = [$this, '_execute'];
     }
 
@@ -57,7 +57,9 @@ class Async implements LoggerAwareInterface
 
     public function execute(Generator $flow, callable $callback = null)
     {
-        $this->logger->info('start');
+        if ($this->logger) {
+            $this->logger->info('start');
+        }
         $wrapped_callback = function ($error, $result) use ($callback) {
             if ($this->logger) {
                 $this->logger->info('end');
@@ -244,7 +246,7 @@ class Async implements LoggerAwareInterface
 
     }
 
-    private function logReflectionFunction(ReflectionFunctionAbstract $function, int $depth =0)
+    private function logReflectionFunction(ReflectionFunctionAbstract $function, int $depth = 0)
     {
         if ($function instanceof ReflectionMethod) {
             $name = $function->getDeclaringClass()->getShortName();
@@ -271,7 +273,7 @@ class Async implements LoggerAwareInterface
             return;
         }
         $info = new ReflectionGenerator($generator);
-        $this->logReflectionFunction( $info->getFunction(), $depth);
+        $this->logReflectionFunction($info->getFunction(), $depth);
     }
 
     private function format($parameters)
