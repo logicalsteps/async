@@ -11,6 +11,7 @@ use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
 use React\Promise\Promise;
 use ReflectionGenerator;
+use ReflectionMethod;
 use Throwable;
 
 class Async implements LoggerAwareInterface
@@ -232,9 +233,9 @@ class Async implements LoggerAwareInterface
             if (is_string($callable)) {
                 $name = $callable;
             } elseif ($callable instanceof Closure) {
-                $name = 'closure';
+                $name = '$closure';
             } else {
-                $name = 'callable';
+                $name = '$callable';
             }
         }
         $this->logger->info('await ' . $name . $this->format($arguments), compact('depth'));
@@ -248,12 +249,15 @@ class Async implements LoggerAwareInterface
         }
         $info = new ReflectionGenerator($generator);
         $f = $info->getFunction();
-        if ($name = $info->getThis()) {
-            if (is_object($name)) {
-                $name = '$' . lcfirst(get_class($name)) . '->' . $f->name;
-            } else {
+        if ($f instanceof ReflectionMethod) {
+            $name = $f->getDeclaringClass()->getShortName();
+            if ($f->isStatic()) {
                 $name .= '::' . $f->name;
+            } else {
+                $name = '$' . lcfirst($name) . '->' . $f->name;
             }
+        } elseif ($f->isClosure()) {
+            $name = '$closure';
         } else {
             $name = $f->name;
         }
