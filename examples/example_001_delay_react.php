@@ -1,6 +1,7 @@
 <?php
 
 use LogicalSteps\Async\Async;
+use LogicalSteps\Async\EchoLogger;
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
@@ -72,7 +73,7 @@ function flow()
     return $timer->hold(7);
 }
 
-$async = new Async();
+$async = new Async(new EchoLogger());
 $async->setLoop($loop);
 $async->execute(flow());
 //$async->execute(flow()); //run another session in parallel

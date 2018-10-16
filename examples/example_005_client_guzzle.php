@@ -2,6 +2,7 @@
 
 use GuzzleHttp\Client;
 use LogicalSteps\Async\Async;
+use LogicalSteps\Async\EchoLogger;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -22,6 +23,6 @@ function status($url)
     return $response->getStatusCode();
 }
 
-$async = new Async();
+$async = new Async(new EchoLogger());
 $async->execute(status('http://httpbin.org/get'), 'trace');
 $async->execute(status('http://httpbin.org/missingPage'), 'trace');
