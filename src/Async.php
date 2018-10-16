@@ -10,6 +10,8 @@ use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
 use React\Promise\Promise;
+use ReflectionFunction;
+use ReflectionFunctionAbstract;
 use ReflectionGenerator;
 use ReflectionMethod;
 use Throwable;
@@ -242,31 +244,34 @@ class Async implements LoggerAwareInterface
 
     }
 
+    private function logReflectionFunction(ReflectionFunctionAbstract $function, int $depth =0)
+    {
+        if ($function instanceof ReflectionMethod) {
+            $name = $function->getDeclaringClass()->getShortName();
+            if ($function->isStatic()) {
+                $name .= '::' . $function->name;
+            } else {
+                $name = '$' . lcfirst($name) . '->' . $function->name;
+            }
+        } elseif ($function->isClosure()) {
+            $name = '$closure';
+        } else {
+            $name = $function->name;
+        }
+        $args = [];
+        foreach ($function->getParameters() as $parameter) {
+            $args[] = '$' . $parameter->name;
+        }
+        $this->logger->info('await ' . $name . '(' . implode(', ', $args) . ');', compact('depth'));
+    }
+
     private function logGenerator(Generator $generator, int $depth = 0)
     {
         if (!$generator->valid() || !$this->logger) {
             return;
         }
         $info = new ReflectionGenerator($generator);
-        $f = $info->getFunction();
-        if ($f instanceof ReflectionMethod) {
-            $name = $f->getDeclaringClass()->getShortName();
-            if ($f->isStatic()) {
-                $name .= '::' . $f->name;
-            } else {
-                $name = '$' . lcfirst($name) . '->' . $f->name;
-            }
-        } elseif ($f->isClosure()) {
-            $name = '$closure';
-        } else {
-            $name = $f->name;
-        }
-        $args = [];
-        foreach ($f->getParameters() as $parameter) {
-            $args[] = '$' . $parameter->name;
-        }
-        $this->logger->info('await ' . $name . '(' . implode(', ', $args) . ');', compact('depth'));
-
+        $this->logReflectionFunction( $info->getFunction(), $depth);
     }
 
     private function format($parameters)
