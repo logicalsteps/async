@@ -155,13 +155,16 @@ class Async implements LoggerAwareInterface
                     ($this->exec)($flow, $callback, $depth);
                 }, $depth + 1);
             } elseif (is_a($value, static::PROMISE_REACT)) {
-                $this->handlePromise($flow, $callback, $depth, $value);
-            } elseif (is_a($value, static::PROMISE_GUZZLE) || is_a($value, static::PROMISE_HTTP)) {
-                $this->handlePromise($flow, $callback, $depth, $value);
+                $this->handlePromise($flow, $callback, $depth, $value,'react');
+            } elseif (is_a($value, static::PROMISE_GUZZLE)) {
+                $this->handlePromise($flow, $callback, $depth, $value, 'guzzle');
+                $value->wait(false);
+            } elseif (is_a($value, static::PROMISE_HTTP)) {
+                $this->handlePromise($flow, $callback, $depth, $value, 'httplug');
                 $value->wait(false);
             } elseif (is_a($value, static::PROMISE_AMP)) {
                 if ($this->logger) {
-                    $this->logger->info('await $promise;');
+                    $this->logger->info('await $ampPromise;');
                 }
                 $value->onResolve(
                     function ($error, $result) use ($flow, $callback, $depth) {
@@ -198,11 +201,12 @@ class Async implements LoggerAwareInterface
      * @param callable $callback
      * @param int $depth
      * @param \React\Promise\PromiseInterface|\GuzzleHttp\Promise\PromiseInterface $value
+     * @param string $type
      */
-    private function handlePromise(Generator $flow, callable $callback, int $depth, $value)
+    private function handlePromise(Generator $flow, callable $callback, int $depth, $value, string $type)
     {
         if ($this->logger) {
-            $this->logger->info('await $promise;');
+            $this->logger->info('await $' . $type . 'Promise;');
         }
         $value->then(
             function ($result) use ($flow, $callback, $depth) {
