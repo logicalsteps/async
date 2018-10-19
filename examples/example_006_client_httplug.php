@@ -7,12 +7,8 @@ use LogicalSteps\Async\EchoLogger;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-function trace($error, $response)
+function trace($response)
 {
-    if ($error) {
-        echo (string)$error . PHP_EOL;
-        return;
-    }
     echo json_encode($response) . PHP_EOL;
 }
 
@@ -28,5 +24,5 @@ function status($url)
 }
 
 $async = new Async(new EchoLogger());
-$async->await(status('http://httplug.io'), 'trace');
-$async->await(status('http://httplug.io/missingPage'), 'trace');
+$async->await(status('http://httplug.io'))->then('trace');
+$async->await(status('http://httplug.io/missingPage'))->then('trace');
