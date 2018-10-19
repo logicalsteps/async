@@ -42,10 +42,16 @@ class Async implements LoggerAwareInterface
         $this->exec = [$this, '_execute'];
     }
 
-    public function promise(Generator $flow): Promise
+    public function execute(Generator $flow): Promise
     {
+        if ($this->logger) {
+            $this->logger->info('start');
+        }
         $deferred = new Deferred();
-        $this->execute($flow, function ($error, $result) use ($deferred) {
+        ($this->exec)($flow, function ($error, $result) use ($deferred) {
+            if ($this->logger) {
+                $this->logger->info('end');
+            }
             if ($error) {
                 return $deferred->reject($error);
             }
@@ -53,23 +59,6 @@ class Async implements LoggerAwareInterface
         });
 
         return $deferred->promise();
-    }
-
-    public function execute(Generator $flow, callable $callback = null)
-    {
-        if ($this->logger) {
-            $this->logger->info('start');
-        }
-        $wrapped_callback = function ($error, $result) use ($callback) {
-            if ($this->logger) {
-                $this->logger->info('end');
-            }
-            if (is_callable($callback)) {
-                $callback($error, $result);
-            }
-        };
-        ($this->exec)($flow, $wrapped_callback);
-
     }
 
     private function _execute(Generator $flow, callable $callback = null, int $depth = 0)
@@ -155,7 +144,7 @@ class Async implements LoggerAwareInterface
                     ($this->exec)($flow, $callback, $depth);
                 }, $depth + 1);
             } elseif (is_a($value, static::PROMISE_REACT)) {
-                $this->handlePromise($flow, $callback, $depth, $value,'react');
+                $this->handlePromise($flow, $callback, $depth, $value, 'react');
             } elseif (is_a($value, static::PROMISE_GUZZLE)) {
                 $this->handlePromise($flow, $callback, $depth, $value, 'guzzle');
                 $value->wait(false);
