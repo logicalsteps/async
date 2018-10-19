@@ -75,7 +75,7 @@ function flow()
 
 $async = new Async(new EchoLogger());
 $async->setLoop($loop);
-$async->execute(flow());
+$async->await(flow());
 //$async->execute(flow()); //run another session in parallel
 
 $loop->run();

@@ -24,5 +24,5 @@ function status($url)
 }
 
 $async = new Async(new EchoLogger());
-$async->execute(status('http://httpbin.org/get'), 'trace');
-$async->execute(status('http://httpbin.org/missingPage'), 'trace');
+$async->await(status('http://httpbin.org/get'), 'trace');
+$async->await(status('http://httpbin.org/missingPage'), 'trace');

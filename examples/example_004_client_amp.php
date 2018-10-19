@@ -25,7 +25,7 @@ $status = function ($url) use ($client) {
 };
 $async = new Async(new EchoLogger());
 $async->useAmpLoop();
-$async->execute($status('http://httpbin.org/get'), 'trace');
-$async->execute($status('http://httpbin.org/missingPage'), 'trace');
+$async->await($status('http://httpbin.org/get'), 'trace');
+$async->await($status('http://httpbin.org/missingPage'), 'trace');
 
 Loop::run();

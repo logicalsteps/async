@@ -42,7 +42,7 @@ class Async implements LoggerAwareInterface
         $this->exec = [$this, '_execute'];
     }
 
-    public function execute(Generator $flow): Promise
+    public function await(Generator $flow): Promise
     {
         if ($this->logger) {
             $this->logger->info('start');

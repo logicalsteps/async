@@ -67,7 +67,7 @@ function flow()
 
 $async = new Async(new EchoLogger());
 $async->useAmpLoop();
-$async->execute(flow());
+$async->await(flow());
 //$async->execute(flow()); //run another session in parallel
 
 Loop::run();
