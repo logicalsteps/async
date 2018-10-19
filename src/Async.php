@@ -7,6 +7,7 @@ use Generator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
+use function React\Promise\all;
 use React\Promise\Deferred;
 use React\Promise\Promise;
 use ReflectionFunctionAbstract;
@@ -59,6 +60,11 @@ class Async implements LoggerAwareInterface
         });
 
         return $deferred->promise();
+    }
+
+    public function awaitAll(Generator ...$flows): Promise
+    {
+        return all(array_map([$this, 'await'], $flows));
     }
 
     private function _execute(Generator $flow, callable $callback = null, int $depth = 0)
