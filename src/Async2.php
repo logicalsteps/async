@@ -34,7 +34,7 @@ class Async2
     public function _handleCallback(...$parameters): PromiseInterface
     {
         if (!count($parameters)) {
-            throw new ArgumentCountError('No callback specified.');
+            throw new ArgumentCountError('No Callable specified.');
         }
         $func = array_shift($parameters);
         if (!is_callable($func)) {
@@ -42,7 +42,7 @@ class Async2
             $func[] = array_shift($parameters);
         }
         if (!is_callable($func)) {
-            throw new InvalidArgumentException('Valid callable is required.');
+            throw new InvalidArgumentException('InvValid Callable.');
         }
         list($promise, $resolver, $rejector) = $this->promise();
         $parameters[] = function ($error, $result) use (&$resolver, &$rejector) {
