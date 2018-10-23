@@ -4,7 +4,7 @@ namespace LogicalSteps\Async\Test;
 
 use LogicalSteps\Async\Async;
 
-class DummyTest extends \PHPUnit_Framework_TestCase
+class DummyTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * A dummy test that calls a beacon method ensuring the class is autolaoded.
