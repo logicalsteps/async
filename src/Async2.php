@@ -4,18 +4,22 @@ namespace LogicalSteps\Async;
 
 
 use Generator;
-use ArgumentCountError;
-use InvalidArgumentException;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 
 class Async2
 {
     const PROMISE_REACT = 'React\Promise\PromiseInterface';
+    const PROMISE_AMP = 'Amp\Promise';
     const PROMISE_GUZZLE = 'GuzzleHttp\Promise\PromiseInterface';
     const PROMISE_HTTP = 'Http\Promise\Promise';
-    const PROMISE_AMP = 'Amp\Promise';
 
+    public static $knownPromises = [
+        self::PROMISE_REACT,
+        self::PROMISE_AMP,
+        self::PROMISE_GUZZLE,
+        self::PROMISE_HTTP
+    ];
 
     private function promise()
     {
@@ -42,13 +46,41 @@ class Async2
         return $promise;
     }
 
-    /**
-     * @param Generator $flow
-     * @return PromiseInterface
-     */
+
     private function _handleGenerator(Generator $flow): PromiseInterface
     {
+        list($promise, $resolver, $rejector) = $this->promise();
 
+        if (!$flow->valid()) {
+            $resolver($flow->getReturn());
+
+            return $promise;
+        }
+        $value = $flow->current();
+        $args = [];
+        $func = [];
+        if (is_array($value) && count($value) > 1) {
+            $func[] = array_shift($value);
+            if (is_callable($func[0])) {
+                $func = $func[0];
+            } else {
+                $func[] = array_shift($value);
+            }
+            $args = $value;
+        } else {
+            $func = $value;
+        }
+        if (is_callable($func)) {
+            $this->_handleCallback($func, ...$args);
+        } elseif ($value instanceof Generator) {
+            $this->_handleGenerator($flow);
+        } elseif ($implements = array_intersect(class_implements($value), Async2::$knownPromises)) {
+            $this->_handlePromise($value, array_shift($implements));
+        } else {
+            $flow->send($value);
+            $this->_handleGenerator($flow);
+        }
+        return $promise;
     }
 
     /**
@@ -57,10 +89,26 @@ class Async2
      * @param \React\Promise\PromiseInterface|\GuzzleHttp\Promise\PromiseInterface $knownPromise
      * @return PromiseInterface
      */
-    public function _handlePromise($knownPromise): PromiseInterface
+    public function _handlePromise($knownPromise, string $interface): PromiseInterface
     {
         list($promise, $resolver, $rejector) = $this->promise();
-        $knownPromise->then($resolver, $rejector);
+        switch ($interface) {
+            case static::PROMISE_REACT:
+                $knownPromise->then($resolver, $rejector);
+                break;
+            case static::PROMISE_GUZZLE:
+            case static::PROMISE_HTTP:
+                $knownPromise->then($resolver, $rejector);
+                //$knownPromise->wait(false); //TODO: handle waiting elsewhere
+                break;
+            case static::PROMISE_AMP:
+                $knownPromise->onResolve(
+                    function ($error, $result) use ($resolver, $rejector) {
+                        $error ? $rejector($error) : $resolver($result);
+                    });
+                break;
+        }
+
         return $promise;
     }
 

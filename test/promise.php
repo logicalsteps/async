@@ -12,7 +12,7 @@ $line = function () {
 $async = new Async2();
 
 $guzzle_promise = new Promise();
-$react_promise = $async->_handlePromise($guzzle_promise);
+$react_promise = $async->_handlePromise($guzzle_promise, Async2::PROMISE_GUZZLE);
 $react_promise->then('var_dump', 'var_dump')->then($line);
 $guzzle_promise->resolve(123);
 
