@@ -36,11 +36,6 @@ class Async2
         if (!count($parameters)) {
             throw new ArgumentCountError('No callback specified.');
         }
-        $resolver = $rejector = null;
-        $promise = new Promise(function ($resolve, $reject, $notify) use (&$resolver, &$rejector) {
-            $resolver = $resolve;
-            $rejector = $reject;
-        });
         $func = array_shift($parameters);
         if (!is_callable($func)) {
             $func = [$func];
@@ -49,6 +44,7 @@ class Async2
         if (!is_callable($func)) {
             throw new InvalidArgumentException('Valid callable is required.');
         }
+        list($promise, $resolver, $rejector) = $this->promise();
         $parameters[] = function ($error, $result) use (&$resolver, &$rejector) {
             if ($error) {
                 $rejector($error);
@@ -77,11 +73,7 @@ class Async2
      */
     public function _handlePromise($knownPromise): PromiseInterface
     {
-        $resolver = $rejector = null;
-        $promise = new Promise(function ($resolve, $reject, $notify) use (&$resolver, &$rejector) {
-            $resolver = $resolve;
-            $rejector = $reject;
-        });
+        list($promise, $resolver, $rejector) = $this->promise();
         $knownPromise->then($resolver, $rejector);
         return $promise;
     }
