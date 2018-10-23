@@ -27,23 +27,9 @@ class Async2
         return [$promise, $resolver, $rejector];
     }
 
-    /**
-     * @param mixed ...$parameters
-     * @return PromiseInterface
-     */
-    public function _handleCallback(...$parameters): PromiseInterface
+
+    public function _handleCallback(callable $callable, ...$parameters): PromiseInterface
     {
-        if (!count($parameters)) {
-            throw new ArgumentCountError('No Callable specified.');
-        }
-        $func = array_shift($parameters);
-        if (!is_callable($func)) {
-            $func = [$func];
-            $func[] = array_shift($parameters);
-        }
-        if (!is_callable($func)) {
-            throw new InvalidArgumentException('InvValid Callable.');
-        }
         list($promise, $resolver, $rejector) = $this->promise();
         $parameters[] = function ($error, $result) use (&$resolver, &$rejector) {
             if ($error) {
@@ -52,7 +38,7 @@ class Async2
             }
             $resolver($result);
         };
-        call_user_func_array($func, $parameters);
+        call_user_func_array($callable, $parameters);
         return $promise;
     }
 

@@ -23,3 +23,15 @@ $callable = function (callable $fn) {
 };
 
 $react_promise = $async->_handleCallback($callable)->then('var_dump', 'var_dump')->then($line);
+
+class Temp
+{
+
+    public static function func(callable $fn)
+    {
+        $fn(null, 789);
+    }
+}
+
+
+$react_promise = $async->_handleCallback(['Temp', 'func'])->then('var_dump', 'var_dump')->then($line);
