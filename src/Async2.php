@@ -32,7 +32,7 @@ class Async2
         return [$promise, $resolver, $rejector];
     }
 
-    private function _handle($value): PromiseInterface
+    public function _handle($value): PromiseInterface
     {
         $arguments = [];
         $func = [];

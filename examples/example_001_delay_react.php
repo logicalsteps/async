@@ -81,5 +81,5 @@ $async->await(flow());
 */
 
 $async = new Async2();
-$async->_handleGenerator(flow())->then('var_dump');
+$async->_handle(flow())->then('var_dump');
 $loop->run();
