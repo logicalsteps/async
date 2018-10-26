@@ -46,8 +46,7 @@ class Async2
         return $promise;
     }
 
-
-    private function _handleGenerator(Generator $flow): PromiseInterface
+    public function _handleGenerator(Generator $flow): PromiseInterface
     {
         list($promise, $resolver, $rejector) = $this->promise();
 
@@ -57,6 +56,10 @@ class Async2
             return $promise;
         }
         $value = $flow->current();
+        $next = function ($result) use ($flow, $resolver, $rejector) {
+            $flow->send($result);
+            $this->_handleGenerator($flow)->then($resolver, $rejector);
+        };
         $args = [];
         $func = [];
         if (is_array($value) && count($value) > 1) {
@@ -70,15 +73,18 @@ class Async2
         } else {
             $func = $value;
         }
+        $nextPromise = null;
         if (is_callable($func)) {
-            $this->_handleCallback($func, ...$args);
+            $nextPromise = $this->_handleCallback($func, ...$args);
         } elseif ($value instanceof Generator) {
-            $this->_handleGenerator($flow);
+            $nextPromise = $this->_handleGenerator($value);
         } elseif ($implements = array_intersect(class_implements($value), Async2::$knownPromises)) {
-            $this->_handlePromise($value, array_shift($implements));
+            $nextPromise = $this->_handlePromise($value, array_shift($implements));
         } else {
-            $flow->send($value);
-            $this->_handleGenerator($flow);
+            $next($value);
+        }
+        if ($nextPromise) {
+            $nextPromise->then($next, $rejector);
         }
         return $promise;
     }
@@ -91,6 +97,9 @@ class Async2
      */
     public function _handlePromise($knownPromise, string $interface): PromiseInterface
     {
+        if ($knownPromise instanceof PromiseInterface) {
+            return $knownPromise;
+        }
         list($promise, $resolver, $rejector) = $this->promise();
         switch ($interface) {
             case static::PROMISE_REACT:
@@ -111,5 +120,4 @@ class Async2
 
         return $promise;
     }
-
 }
