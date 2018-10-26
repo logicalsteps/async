@@ -92,7 +92,7 @@ class Async2
     /**
      * Handle known promise interfaces
      *
-     * @param \React\Promise\PromiseInterface|\GuzzleHttp\Promise\PromiseInterface $knownPromise
+     * @param \React\Promise\PromiseInterface|\GuzzleHttp\Promise\PromiseInterface|\Amp\Promise|\Http\Promise\Promise $knownPromise
      * @return PromiseInterface
      */
     public function _handlePromise($knownPromise, string $interface): PromiseInterface
