@@ -85,7 +85,7 @@ class Async2
         if (is_callable($func)) {
             return $this->_handleCallback($func, $arguments, $depth);
         } elseif ($value instanceof Generator) {
-            return $this->_handleGenerator($value, $depth);
+            return $this->_handleGenerator($value, 1 + $depth);
         } elseif ($implements = array_intersect(class_implements($value), Async2::$knownPromises)) {
             return $this->_handlePromise($value, array_shift($implements), $depth);
         } else {
@@ -111,7 +111,7 @@ class Async2
 
     public function _handleGenerator(Generator $flow, int $depth = 0): PromiseInterface
     {
-        $this->logGenerator($flow, $depth);
+        $this->logGenerator($flow, $depth-1);
         list($promise, $resolver, $rejector) = $this->promise();
 
         if (!$flow->valid()) {
@@ -120,11 +120,11 @@ class Async2
             return $promise;
         }
         $value = $flow->current();
-        $next = function ($result) use ($flow, $resolver, $rejector) {
+        $next = function ($result) use ($flow, $resolver, $rejector, $depth) {
             $flow->send($result);
-            $this->_handleGenerator($flow)->then($resolver, $rejector);
+            $this->_handleGenerator($flow, $depth)->then($resolver, $rejector);
         };
-        $nextPromise = $this->_handle($value, 1 + $depth);
+        $nextPromise = $this->_handle($value, $depth);
         $nextPromise->then($next, $rejector);
         return $promise;
     }
