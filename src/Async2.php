@@ -3,10 +3,15 @@
 namespace LogicalSteps\Async;
 
 
+use Closure;
 use Generator;
+use Psr\Log\LoggerInterface;
 use React\Promise\FulfilledPromise;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
+use ReflectionFunctionAbstract;
+use ReflectionGenerator;
+use ReflectionMethod;
 
 class Async2
 {
@@ -21,6 +26,36 @@ class Async2
         self::PROMISE_GUZZLE,
         self::PROMISE_HTTP
     ];
+
+    /**
+     * @var LoggerInterface
+     */
+    protected $logger;
+
+    public function __construct(LoggerInterface $logger = null)
+    {
+        if ($logger) {
+            $this->logger = $logger;
+        }
+    }
+
+    public function await($value): PromiseInterface
+    {
+        if ($this->logger) {
+            $this->logger->info('start');
+        }
+        return $this->_handle($value, -1)->then(
+            function ($result) {
+                if ($this->logger) {
+                    $this->logger->info('end');
+                }
+            },
+            function ($error) {
+                if ($this->logger) {
+                    $this->logger->error('error: ' . (string)$error);
+                }
+            });
+    }
 
     private function promise()
     {
@@ -48,11 +83,11 @@ class Async2
             $func = $value;
         }
         if (is_callable($func)) {
-            return $this->_handleCallback($func, $arguments, $depth+1);
+            return $this->_handleCallback($func, $arguments, $depth);
         } elseif ($value instanceof Generator) {
-            return $this->_handleGenerator($value, $depth+1);
+            return $this->_handleGenerator($value, $depth);
         } elseif ($implements = array_intersect(class_implements($value), Async2::$knownPromises)) {
-            return $this->_handlePromise($value, array_shift($implements), $depth+1);
+            return $this->_handlePromise($value, array_shift($implements), $depth);
         } else {
             return new FulfilledPromise($value);
         }
@@ -61,6 +96,7 @@ class Async2
 
     public function _handleCallback(callable $callable, array $parameters, int $depth = 0): PromiseInterface
     {
+        $this->logCallback($callable, $parameters, $depth);
         list($promise, $resolver, $rejector) = $this->promise();
         $parameters[] = function ($error, $result) use (&$resolver, &$rejector) {
             if ($error) {
@@ -75,6 +111,7 @@ class Async2
 
     public function _handleGenerator(Generator $flow, int $depth = 0): PromiseInterface
     {
+        $this->logGenerator($flow, $depth);
         list($promise, $resolver, $rejector) = $this->promise();
 
         if (!$flow->valid()) {
@@ -87,7 +124,7 @@ class Async2
             $flow->send($result);
             $this->_handleGenerator($flow)->then($resolver, $rejector);
         };
-        $nextPromise = $this->_handle($value);
+        $nextPromise = $this->_handle($value, 1 + $depth);
         $nextPromise->then($next, $rejector);
         return $promise;
     }
@@ -96,10 +133,13 @@ class Async2
      * Handle known promise interfaces
      *
      * @param \React\Promise\PromiseInterface|\GuzzleHttp\Promise\PromiseInterface|\Amp\Promise|\Http\Promise\Promise $knownPromise
+     * @param string $interface
+     * @param int $depth
      * @return PromiseInterface
      */
     public function _handlePromise($knownPromise, string $interface, int $depth = 0): PromiseInterface
     {
+        $this->logPromise($knownPromise, $interface, $depth);
         if ($knownPromise instanceof PromiseInterface) {
             return $knownPromise;
         }
@@ -122,5 +162,89 @@ class Async2
         }
 
         return $promise;
+    }
+
+    private function logCallback(callable $callable, array $parameters, int $depth = 0)
+    {
+        if ($depth < 0 || !$this->logger) {
+            return;
+        }
+        if (is_array($callable)) {
+            $name = $callable[0];
+            if (is_object($name)) {
+                $name = '$' . lcfirst(get_class($name)) . '->' . $callable[1];
+            } else {
+                $name .= '::' . $callable[1];
+            }
+
+        } else {
+            if (is_string($callable)) {
+                $name = $callable;
+            } elseif ($callable instanceof Closure) {
+                $name = '$closure';
+            } else {
+                $name = '$callable';
+            }
+        }
+        $this->logger->info('await ' . $name . $this->format($parameters), compact('depth'));
+
+    }
+
+    private function logPromise($promise, string $interface, int $depth)
+    {
+        if ($depth < 0 || !$this->logger) {
+            return;
+        }
+        switch ($interface) {
+            case static::PROMISE_REACT:
+                $type = 'react';
+                break;
+            case static::PROMISE_GUZZLE:
+                $type = 'guzzle';
+                break;
+            case static::PROMISE_HTTP:
+                $type = 'httplug';
+                break;
+            case static::PROMISE_AMP:
+                $type = 'amp';
+                break;
+        }
+        $this->logger->info('await $' . $type . 'Promise;', compact('depth'));
+
+    }
+
+    private function logGenerator(Generator $generator, int $depth = 0)
+    {
+        if ($depth < 0 || !$generator->valid() || !$this->logger) {
+            return;
+        }
+        $info = new ReflectionGenerator($generator);
+        $this->logReflectionFunction($info->getFunction(), $depth);
+    }
+
+    private function format($parameters)
+    {
+        return '(' . substr(json_encode($parameters), 1, -1) . ');';
+    }
+
+    private function logReflectionFunction(ReflectionFunctionAbstract $function, int $depth = 0)
+    {
+        if ($function instanceof ReflectionMethod) {
+            $name = $function->getDeclaringClass()->getShortName();
+            if ($function->isStatic()) {
+                $name .= '::' . $function->name;
+            } else {
+                $name = '$' . lcfirst($name) . '->' . $function->name;
+            }
+        } elseif ($function->isClosure()) {
+            $name = '$closure';
+        } else {
+            $name = $function->name;
+        }
+        $args = [];
+        foreach ($function->getParameters() as $parameter) {
+            $args[] = '$' . $parameter->name;
+        }
+        $this->logger->info('await ' . $name . '(' . implode(', ', $args) . ');', compact('depth'));
     }
 }
