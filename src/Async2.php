@@ -32,7 +32,7 @@ class Async2
         return [$promise, $resolver, $rejector];
     }
 
-    private function _handle(...$value): PromiseInterface
+    private function _handle($value): PromiseInterface
     {
         $arguments = [];
         $func = [];
@@ -87,32 +87,8 @@ class Async2
             $flow->send($result);
             $this->_handleGenerator($flow)->then($resolver, $rejector);
         };
-        $arguments = [];
-        $func = [];
-        if (is_array($value) && count($value) > 1) {
-            $func[] = array_shift($value);
-            if (is_callable($func[0])) {
-                $func = $func[0];
-            } else {
-                $func[] = array_shift($value);
-            }
-            $arguments = $value;
-        } else {
-            $func = $value;
-        }
-        $nextPromise = null;
-        if (is_callable($func)) {
-            $nextPromise = $this->_handleCallback($func, ...$arguments);
-        } elseif ($value instanceof Generator) {
-            $nextPromise = $this->_handleGenerator($value);
-        } elseif ($implements = array_intersect(class_implements($value), Async2::$knownPromises)) {
-            $nextPromise = $this->_handlePromise($value, array_shift($implements));
-        } else {
-            $next($value);
-        }
-        if ($nextPromise) {
-            $nextPromise->then($next, $rejector);
-        }
+        $nextPromise = $this->_handle($value);
+        $nextPromise->then($next, $rejector);
         return $promise;
     }
 
