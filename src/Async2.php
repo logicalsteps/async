@@ -32,7 +32,7 @@ class Async2
         return [$promise, $resolver, $rejector];
     }
 
-    public function _handle($value): PromiseInterface
+    public function _handle($value, int $depth = 0): PromiseInterface
     {
         $arguments = [];
         $func = [];
@@ -48,18 +48,18 @@ class Async2
             $func = $value;
         }
         if (is_callable($func)) {
-            return $this->_handleCallback($func, ...$arguments);
+            return $this->_handleCallback($func, $arguments, $depth+1);
         } elseif ($value instanceof Generator) {
-            return $this->_handleGenerator($value);
+            return $this->_handleGenerator($value, $depth+1);
         } elseif ($implements = array_intersect(class_implements($value), Async2::$knownPromises)) {
-            return $this->_handlePromise($value, array_shift($implements));
+            return $this->_handlePromise($value, array_shift($implements), $depth+1);
         } else {
             return new FulfilledPromise($value);
         }
     }
 
 
-    public function _handleCallback(callable $callable, ...$parameters): PromiseInterface
+    public function _handleCallback(callable $callable, array $parameters, int $depth = 0): PromiseInterface
     {
         list($promise, $resolver, $rejector) = $this->promise();
         $parameters[] = function ($error, $result) use (&$resolver, &$rejector) {
@@ -73,7 +73,7 @@ class Async2
         return $promise;
     }
 
-    public function _handleGenerator(Generator $flow): PromiseInterface
+    public function _handleGenerator(Generator $flow, int $depth = 0): PromiseInterface
     {
         list($promise, $resolver, $rejector) = $this->promise();
 
@@ -98,7 +98,7 @@ class Async2
      * @param \React\Promise\PromiseInterface|\GuzzleHttp\Promise\PromiseInterface|\Amp\Promise|\Http\Promise\Promise $knownPromise
      * @return PromiseInterface
      */
-    public function _handlePromise($knownPromise, string $interface): PromiseInterface
+    public function _handlePromise($knownPromise, string $interface, int $depth = 0): PromiseInterface
     {
         if ($knownPromise instanceof PromiseInterface) {
             return $knownPromise;
