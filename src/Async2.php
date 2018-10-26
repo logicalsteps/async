@@ -4,6 +4,7 @@ namespace LogicalSteps\Async;
 
 
 use Generator;
+use React\Promise\FulfilledPromise;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 
@@ -29,6 +30,32 @@ class Async2
             $rejector = $reject;
         });
         return [$promise, $resolver, $rejector];
+    }
+
+    private function _handle(...$value): PromiseInterface
+    {
+        $arguments = [];
+        $func = [];
+        if (is_array($value) && count($value) > 1) {
+            $func[] = array_shift($value);
+            if (is_callable($func[0])) {
+                $func = $func[0];
+            } else {
+                $func[] = array_shift($value);
+            }
+            $arguments = $value;
+        } else {
+            $func = $value;
+        }
+        if (is_callable($func)) {
+            return $this->_handleCallback($func, ...$arguments);
+        } elseif ($value instanceof Generator) {
+            return $this->_handleGenerator($value);
+        } elseif ($implements = array_intersect(class_implements($value), Async2::$knownPromises)) {
+            return $this->_handlePromise($value, array_shift($implements));
+        } else {
+            return new FulfilledPromise($value);
+        }
     }
 
 
@@ -60,7 +87,7 @@ class Async2
             $flow->send($result);
             $this->_handleGenerator($flow)->then($resolver, $rejector);
         };
-        $args = [];
+        $arguments = [];
         $func = [];
         if (is_array($value) && count($value) > 1) {
             $func[] = array_shift($value);
@@ -69,13 +96,13 @@ class Async2
             } else {
                 $func[] = array_shift($value);
             }
-            $args = $value;
+            $arguments = $value;
         } else {
             $func = $value;
         }
         $nextPromise = null;
         if (is_callable($func)) {
-            $nextPromise = $this->_handleCallback($func, ...$args);
+            $nextPromise = $this->_handleCallback($func, ...$arguments);
         } elseif ($value instanceof Generator) {
             $nextPromise = $this->_handleGenerator($value);
         } elseif ($implements = array_intersect(class_implements($value), Async2::$knownPromises)) {
