@@ -62,11 +62,11 @@ function flow()
     //echo 'after one second' . PHP_EOL;
     yield $timer->promise(2);
     //echo 'after two seconds' . PHP_EOL;
-    return $timer->hold(7);
+    return yield $timer->hold(7);
 }
 
 $async = new Async(new EchoLogger());
-$async->useAmpLoop();
+//$async->useAmpLoop();
 $async->await(flow());
 //$async->execute(flow()); //run another session in parallel
 

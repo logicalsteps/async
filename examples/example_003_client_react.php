@@ -1,7 +1,7 @@
 <?php
 
 use Clue\React\Buzz\Browser;
-use LogicalSteps\Async\Async;
+use LogicalSteps\Async\Async2 as Async;
 use LogicalSteps\Async\EchoLogger;
 use React\EventLoop\Factory;
 
@@ -17,11 +17,12 @@ $browser = (new Browser($loop))->withOptions(['streaming' => true, 'obeySuccessC
 
 $status = function ($url) use ($browser) {
     $response = yield $browser->get($url);
-    return $response->getStatusCode();
+    $code = $response->getStatusCode();
+    return $code; //$response->getStatusCode();
 };
 
 $async = new Async(new EchoLogger());
-$async->setLoop($loop);
+//$async->setLoop($loop);
 $async->await($status('http://httpbin.org/get'))->then('trace');
 $async->await($status('http://httpbin.org/missingPage'))->then('trace');
 

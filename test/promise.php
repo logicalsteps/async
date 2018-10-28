@@ -10,6 +10,7 @@ $line = function () {
 };
 
 $async = new Async2();
+$async->waitForGuzzleAndHttplug = false;
 
 $guzzle_promise = new Promise();
 $react_promise = $async->_handlePromise($guzzle_promise, Async2::PROMISE_GUZZLE);

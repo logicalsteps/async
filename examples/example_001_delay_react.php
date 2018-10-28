@@ -1,7 +1,6 @@
 <?php
 
-use LogicalSteps\Async\Async;
-use LogicalSteps\Async\Async2;
+use LogicalSteps\Async\Async2 as Async;
 use LogicalSteps\Async\EchoLogger;
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
@@ -80,6 +79,6 @@ $async->await(flow());
 //$async->execute(flow()); //run another session in parallel
 */
 
-$async = new Async2(new EchoLogger);
+$async = new Async(new EchoLogger);
 $async->await(flow())->then('var_dump');
 $loop->run();
