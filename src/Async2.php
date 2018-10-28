@@ -44,17 +44,21 @@ class Async2
         if ($this->logger) {
             $this->logger->info('start');
         }
-        return $this->_handle($value, -1)->then(
-            function ($result) {
+        list($promise, $resolver, $rejector) = $this->promise();
+        $this->_handle($value, -1)->then(
+            function ($result) use ($resolver) {
                 if ($this->logger) {
                     $this->logger->info('end');
                 }
+                $resolver($result);
             },
-            function ($error) {
+            function ($error) use ($rejector) {
                 if ($this->logger) {
                     $this->logger->error('error: ' . (string)$error);
                 }
+                $rejector($error);
             });
+        return $promise;
     }
 
     private function promise()
@@ -111,7 +115,7 @@ class Async2
 
     public function _handleGenerator(Generator $flow, int $depth = 0): PromiseInterface
     {
-        $this->logGenerator($flow, $depth-1);
+        $this->logGenerator($flow, $depth - 1);
         list($promise, $resolver, $rejector) = $this->promise();
 
         if (!$flow->valid()) {
