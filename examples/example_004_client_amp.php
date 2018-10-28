@@ -20,7 +20,7 @@ $status = function ($url) use ($client) {
     return $response->getStatus();
 };
 $async = new Async(new EchoLogger());
-//$async->useAmpLoop();
+$async->useAmpLoop();
 $async->await($status('http://httpbin.org/get'))->then('trace');
 $async->await($status('http://httpbin.org/missingPage'))->then('trace');
 
