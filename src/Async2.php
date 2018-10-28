@@ -31,6 +31,10 @@ class Async2
      * @var LoggerInterface
      */
     protected $logger;
+    /**
+     * @var bool
+     */
+    public $waitForGuzzleAndHttplug = true;
 
     public function __construct(LoggerInterface $logger = null)
     {
@@ -98,7 +102,7 @@ class Async2
     }
 
 
-    public function _handleCallback(callable $callable, array $parameters, int $depth = 0): PromiseInterface
+    public function _handleCallback(callable $callable, array $parameters = [], int $depth = 0): PromiseInterface
     {
         $this->logCallback($callable, $parameters, $depth);
         list($promise, $resolver, $rejector) = $this->promise();
@@ -155,7 +159,9 @@ class Async2
             case static::PROMISE_GUZZLE:
             case static::PROMISE_HTTP:
                 $knownPromise->then($resolver, $rejector);
-                //$knownPromise->wait(false); //TODO: handle waiting elsewhere
+                if ($this->waitForGuzzleAndHttplug) {
+                    $knownPromise->wait(false);
+                }
                 break;
             case static::PROMISE_AMP:
                 $knownPromise->onResolve(
