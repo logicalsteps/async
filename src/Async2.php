@@ -73,7 +73,7 @@ class Async2
         return [$promise, $resolver, $rejector];
     }
 
-    public function _handle($value, int $depth = 0): PromiseInterface
+    protected function _handle($value, int $depth = 0): PromiseInterface
     {
         $arguments = [];
         $func = [];
@@ -100,7 +100,7 @@ class Async2
     }
 
 
-    public function _handleCallback(callable $callable, array $parameters = [], int $depth = 0): PromiseInterface
+    protected function _handleCallback(callable $callable, array $parameters = [], int $depth = 0): PromiseInterface
     {
         $this->logCallback($callable, $parameters, $depth);
         list($promise, $resolver, $rejector) = $this->promise();
@@ -115,7 +115,7 @@ class Async2
         return $promise;
     }
 
-    public function _handleGenerator(Generator $flow, int $depth = 0): PromiseInterface
+    protected function _handleGenerator(Generator $flow, int $depth = 0): PromiseInterface
     {
         $this->logGenerator($flow, $depth-1);
         list($promise, $resolver, $rejector) = $this->promise();
@@ -143,7 +143,7 @@ class Async2
      * @param int $depth
      * @return PromiseInterface
      */
-    public function _handlePromise($knownPromise, string $interface, int $depth = 0): PromiseInterface
+    protected function _handlePromise($knownPromise, string $interface, int $depth = 0): PromiseInterface
     {
         $this->logPromise($knownPromise, $interface, $depth);
         if ($knownPromise instanceof PromiseInterface) {
