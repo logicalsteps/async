@@ -53,11 +53,13 @@ class Async2
                 if ($this->logger) {
                     $this->logger->info('end');
                 }
+                return $result;
             },
             function ($error) {
                 if ($this->logger) {
                     $this->logger->error('error: ' . (string)$error);
                 }
+                return $error;
             });
     }
 
