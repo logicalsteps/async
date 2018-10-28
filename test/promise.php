@@ -13,7 +13,8 @@ $async = new Async2();
 $async->waitForGuzzleAndHttplug = false;
 
 $guzzle_promise = new Promise();
-$react_promise = $async->_handlePromise($guzzle_promise, Async2::PROMISE_GUZZLE);
+//$react_promise = $async->_handlePromise($guzzle_promise, Async2::PROMISE_GUZZLE);
+$react_promise = $async->await($guzzle_promise);
 $react_promise->then('var_dump', 'var_dump')->then($line);
 $guzzle_promise->resolve(123);
 
@@ -23,7 +24,7 @@ $callable = function (callable $fn) {
     $fn(null, 456);
 };
 
-$react_promise = $async->_handleCallback($callable)->then('var_dump', 'var_dump')->then($line);
+$react_promise = $async->await($callable)->then('var_dump', 'var_dump')->then($line);
 
 class Temp
 {
@@ -35,4 +36,4 @@ class Temp
 }
 
 
-$react_promise = $async->_handleCallback(['Temp', 'func'])->then('var_dump', 'var_dump')->then($line);
+$react_promise = $async->await(['Temp', 'func'])->then('var_dump', 'var_dump')->then($line);
