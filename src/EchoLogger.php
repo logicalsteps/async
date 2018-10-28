@@ -59,10 +59,10 @@ class EchoLogger extends AbstractLogger
                     $message = str_replace('await ', $this->color('await ', 'brightGrey'), $message);
                 }
                 $depth = $context['depth'] ?? 0;
-                $tab = $depth
+                $depth = $depth
                     ? ' │' . str_repeat(" ", $depth * 2) . $this->color('¤ ', 'yellow')
                     : ' ├' . $this->color('» ', 'brightYellow');
-                $message = $tab . $message . ' ' . $depth;
+                $message = $depth . $message;
         }
         $elapsed = round((microtime(true) - $this->startTime));
         echo ' ' . str_pad((string)$elapsed, 5, '0', STR_PAD_LEFT)
