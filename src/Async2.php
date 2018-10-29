@@ -138,7 +138,7 @@ class Async2
     }
 
 
-    protected function _handleCallback(callable $callable, array $parameters = [], callable $callback, int $depth = 0)
+    protected function _handleCallback(callable $callable, array $parameters, callable $callback, int $depth = 0)
     {
         $this->logCallback($callable, $parameters, $depth);
         $parameters[] = $callback;
