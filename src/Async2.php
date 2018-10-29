@@ -6,7 +6,6 @@ namespace LogicalSteps\Async;
 use Closure;
 use Generator;
 use Psr\Log\LoggerInterface;
-use React\Promise\FulfilledPromise;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use ReflectionFunctionAbstract;
@@ -72,19 +71,22 @@ class Async2
         if ($this->logger) {
             $this->logger->info('start');
         }
-        return $this->_handle($value, -1)->then(
-            function ($result) {
+        list($promise, $resolver, $rejector) = $this->promise();
+        $callback = function ($error, $result) use ($resolver, $rejector) {
+            if ($error) {
                 if ($this->logger) {
                     $this->logger->info('end');
                 }
-                return $result;
-            },
-            function ($error) {
-                if ($this->logger) {
-                    $this->logger->error('error: ' . (string)$error);
-                }
-                return $error;
-            });
+                $rejector($error);
+                return;
+            }
+            if ($this->logger) {
+                $this->logger->info('end');
+            }
+            $resolver($result);
+        };
+        $this->_handle($value, $callback, -1);
+        return $promise;
     }
 
     /**
@@ -109,7 +111,7 @@ class Async2
         return [$promise, $resolver, $rejector];
     }
 
-    protected function _handle($value, int $depth = 0): PromiseInterface
+    protected function _handle($value, callable $callback, int $depth = 0)
     {
         $arguments = [];
         $func = [];
@@ -125,50 +127,40 @@ class Async2
             $func = $value;
         }
         if (is_callable($func)) {
-            return $this->_handleCallback($func, $arguments, $depth);
+            $this->_handleCallback($func, $arguments, $callback, $depth);
         } elseif ($value instanceof Generator) {
-            return $this->_handleGenerator($value, 1 + $depth);
+            $this->_handleGenerator($value, $callback, 1 + $depth);
         } elseif ($implements = array_intersect(class_implements($value), Async2::$knownPromises)) {
-            return $this->_handlePromise($value, array_shift($implements), $depth);
+            $this->_handlePromise($value, array_shift($implements), $callback, $depth);
         } else {
-            return new FulfilledPromise($value);
+            $callback(null, $value);
         }
     }
 
 
-    protected function _handleCallback(callable $callable, array $parameters = [], int $depth = 0): PromiseInterface
+    protected function _handleCallback(callable $callable, array $parameters = [], callable $callback, int $depth = 0)
     {
         $this->logCallback($callable, $parameters, $depth);
-        list($promise, $resolver, $rejector) = $this->promise();
-        $parameters[] = function ($error, $result) use (&$resolver, &$rejector) {
-            if ($error) {
-                $rejector($error);
-                return;
-            }
-            $resolver($result);
-        };
+        $parameters[] = $callback;
         call_user_func_array($callable, $parameters);
-        return $promise;
     }
 
-    protected function _handleGenerator(Generator $flow, int $depth = 0): PromiseInterface
+    protected function _handleGenerator(Generator $flow, callable $callback, int $depth = 0)
     {
         $this->logGenerator($flow, $depth - 1);
-        list($promise, $resolver, $rejector) = $this->promise();
 
         if (!$flow->valid()) {
-            $resolver($flow->getReturn());
-
-            return $promise;
+            return $callback(null, $flow->getReturn());
         }
         $value = $flow->current();
-        $next = function ($result) use ($flow, $resolver, $rejector, $depth) {
+        $next = function ($error, $result) use ($flow, $callback, $depth) {
+            if ($error) {
+                return $callback($error);
+            }
             $flow->send($result);
-            $this->_handleGenerator($flow, $depth)->then($resolver, $rejector);
+            $this->_handleGenerator($flow, $callback, $depth);
         };
-        $nextPromise = $this->_handle($value, $depth);
-        $nextPromise->then($next, $rejector);
-        return $promise;
+        $this->_handle($value, $next, $depth);
     }
 
     /**
@@ -179,13 +171,15 @@ class Async2
      * @param int $depth
      * @return PromiseInterface
      */
-    protected function _handlePromise($knownPromise, string $interface, int $depth = 0): PromiseInterface
+    protected function _handlePromise($knownPromise, string $interface, callable $callback, int $depth = 0)
     {
         $this->logPromise($knownPromise, $interface, $depth);
-        if ($knownPromise instanceof PromiseInterface) {
-            return $knownPromise;
-        }
-        list($promise, $resolver, $rejector) = $this->promise();
+        $resolver = function ($result) use ($callback) {
+            $callback(null, $result);
+        };
+        $rejector = function ($error) use ($callback) {
+            $callback($error);
+        };
         switch ($interface) {
             case static::PROMISE_REACT:
                 $knownPromise->then($resolver, $rejector);
@@ -204,8 +198,6 @@ class Async2
                     });
                 break;
         }
-
-        return $promise;
     }
 
     private function logCallback(callable $callable, array $parameters, int $depth = 0)
