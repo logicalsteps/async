@@ -6,8 +6,6 @@ namespace LogicalSteps\Async;
 use Closure;
 use Generator;
 use Psr\Log\LoggerInterface;
-use React\EventLoop\LoopInterface;
-use function React\Promise\all;
 use React\Promise\FulfilledPromise;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
@@ -30,10 +28,6 @@ class Async2
     ];
 
     /**
-     * @var LoopInterface
-     */
-    protected $loop;
-    /**
      * @var LoggerInterface
      */
     protected $logger;
@@ -42,40 +36,11 @@ class Async2
      */
     public $waitForGuzzleAndHttplug = true;
 
-    protected $handle;
-
     public function __construct(LoggerInterface $logger = null)
     {
         if ($logger) {
             $this->logger = $logger;
         }
-        $this->handle = [$this, '_handle'];
-    }
-
-    /**
-     * Sets a logger instance on the object.
-     *
-     * @param LoggerInterface $logger
-     *
-     * @return void
-     */
-    public function setLogger(LoggerInterface $logger)
-    {
-        $this->logger = $logger;
-    }
-
-    /**
-     * @param LoopInterface $loop
-     */
-    public function setLoop(LoopInterface $loop)
-    {
-        $this->loop = $loop;
-        $this->handle = [$this, '_handleReactLoop'];
-    }
-
-    public function useAmpLoop()
-    {
-        $this->handle = [$this, '_handleAmpLoop'];
     }
 
     public function await($value): PromiseInterface
@@ -83,7 +48,7 @@ class Async2
         if ($this->logger) {
             $this->logger->info('start');
         }
-        return ($this->handle)($value, -1)->then(
+        return $this->_handle($value, -1)->then(
             function ($result) {
                 if ($this->logger) {
                     $this->logger->info('end');
@@ -106,24 +71,6 @@ class Async2
             $rejector = $reject;
         });
         return [$promise, $resolver, $rejector];
-    }
-
-    protected function _handleReactLoop($value, int $depth = 0): PromiseInterface
-    {
-        list($promise, $resolver) = $this->promise();
-        $this->loop->futureTick($resolver);
-        return all([$promise, $this->_handle($value, $depth)])->then(function ($values) {
-            return $values[1];
-        });ø
-    }
-
-    protected function _handleAmpLoop($value, int $depth = 0): PromiseInterface
-    {
-        list($promise, $resolver) = $this->promise();
-        ('\Amp\Loop::defer')($resolver);
-        return all([$promise, $this->_handle($value, $depth)])->then(function ($values) {
-            return $values[1];
-        });
     }
 
     protected function _handle($value, int $depth = 0): PromiseInterface
@@ -170,7 +117,7 @@ class Async2
 
     protected function _handleGenerator(Generator $flow, int $depth = 0): PromiseInterface
     {
-        $this->logGenerator($flow, $depth - 1);
+        $this->logGenerator($flow, $depth-1);
         list($promise, $resolver, $rejector) = $this->promise();
 
         if (!$flow->valid()) {
@@ -183,7 +130,7 @@ class Async2
             $flow->send($result);
             $this->_handleGenerator($flow, $depth)->then($resolver, $rejector);
         };
-        $nextPromise = ($this->handle)($value, $depth);
+        $nextPromise = $this->_handle($value, $depth);
         $nextPromise->then($next, $rejector);
         return $promise;
     }
