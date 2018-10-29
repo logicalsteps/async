@@ -2,7 +2,7 @@
 
 use Amp\Deferred;
 use Amp\Loop;
-use LogicalSteps\Async\Async2 as Async;
+use LogicalSteps\Async\Async;
 use LogicalSteps\Async\EchoLogger;
 
 require __DIR__ . '/../vendor/autoload.php';

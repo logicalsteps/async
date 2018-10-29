@@ -1,7 +1,7 @@
 <?php
 
 use GuzzleHttp\Promise\Promise;
-use LogicalSteps\Async\Async2;
+use LogicalSteps\Async\Async;
 
 include __DIR__ . '/bootstrap.php';
 
@@ -9,11 +9,11 @@ $line = function () {
     echo '-------------------------------------' . PHP_EOL;
 };
 
-$async = new Async2();
+$async = new Async();
 $async->waitForGuzzleAndHttplug = false;
 
 $guzzle_promise = new Promise();
-//$react_promise = $async->_handlePromise($guzzle_promise, Async2::PROMISE_GUZZLE);
+//$react_promise = $async->_handlePromise($guzzle_promise, Async::PROMISE_GUZZLE);
 $react_promise = $async->await($guzzle_promise);
 $react_promise->then('var_dump', 'var_dump')->then($line);
 $guzzle_promise->resolve(123);

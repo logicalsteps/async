@@ -18,7 +18,7 @@ use ReflectionMethod;
  * @method setLogger(EchoLogger $param)
  * @method await($value)
  */
-class Async2
+class Async
 {
     const PROMISE_REACT = 'React\Promise\PromiseInterface';
     const PROMISE_AMP = 'Amp\Promise';
@@ -130,7 +130,7 @@ class Async2
             $this->_handleCallback($func, $arguments, $callback, $depth);
         } elseif ($value instanceof Generator) {
             $this->_handleGenerator($value, $callback, 1 + $depth);
-        } elseif ($implements = array_intersect(class_implements($value), Async2::$knownPromises)) {
+        } elseif ($implements = array_intersect(class_implements($value), Async::$knownPromises)) {
             $this->_handlePromise($value, array_shift($implements), $callback, $depth);
         } else {
             $callback(null, $value);

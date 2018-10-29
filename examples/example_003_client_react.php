@@ -1,7 +1,7 @@
 <?php
 
 use Clue\React\Buzz\Browser;
-use LogicalSteps\Async\Async2 as Async;
+use LogicalSteps\Async\Async;
 use LogicalSteps\Async\EchoLogger;
 use React\EventLoop\Factory;
 
