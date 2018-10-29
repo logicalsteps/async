@@ -28,6 +28,17 @@ class AsyncTest extends TestCase
         $this->assertPromiseFulfillsWith($promise, 14);
     }
 
+    public function testAwaitForGenerator()
+    {
+        $gen = function () {
+            return yield 28;
+        };
+
+        $promise = Async::await($gen);
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertPromiseFulfillsWith($promise, 28);
+    }
+
     /*
     public function testSetLogger()
     {
