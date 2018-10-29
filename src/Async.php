@@ -14,9 +14,9 @@ use ReflectionMethod;
 
 /**
  * @method static setLogger(EchoLogger $param)
- * @method static await($value)
+ * @method static PromiseInterface await($value)
  * @method setLogger(EchoLogger $param)
- * @method await($value)
+ * @method PromiseInterface await($value)
  */
 class Async
 {
@@ -130,7 +130,7 @@ class Async
             $this->_handleCallback($func, $arguments, $callback, $depth);
         } elseif ($value instanceof Generator) {
             $this->_handleGenerator($value, $callback, 1 + $depth);
-        } elseif ($implements = array_intersect(class_implements($value), Async::$knownPromises)) {
+        } elseif (is_object($value) && $implements = array_intersect(class_implements($value), Async::$knownPromises)) {
             $this->_handlePromise($value, array_shift($implements), $callback, $depth);
         } else {
             $callback(null, $value);
