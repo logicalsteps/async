@@ -13,6 +13,12 @@ use ReflectionFunctionAbstract;
 use ReflectionGenerator;
 use ReflectionMethod;
 
+/**
+ * @method static setLogger(EchoLogger $param)
+ * @method static await($value)
+ * @method setLogger(EchoLogger $param)
+ * @method await($value)
+ */
 class Async2
 {
     const PROMISE_REACT = 'React\Promise\PromiseInterface';
@@ -43,7 +49,25 @@ class Async2
         }
     }
 
-    public function await($value): PromiseInterface
+    public function __call($name, $arguments)
+    {
+        switch ($name) {
+            case 'await':
+            case 'setLogger':
+                return call_user_func_array([$this, "_$name"], $arguments);
+        }
+    }
+
+    public static function __callStatic($name, $arguments)
+    {
+        static $instance;
+        if (!$instance) {
+            $instance = new static();
+        }
+        return $instance->__call($name, $arguments);
+    }
+
+    protected function _await($value): PromiseInterface
     {
         if ($this->logger) {
             $this->logger->info('start');
@@ -61,6 +85,18 @@ class Async2
                 }
                 return $error;
             });
+    }
+
+    /**
+     * Sets a logger instance on the object.
+     *
+     * @param LoggerInterface $logger
+     *
+     * @return void
+     */
+    protected function _setLogger(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
     }
 
     private function promise()
@@ -117,7 +153,7 @@ class Async2
 
     protected function _handleGenerator(Generator $flow, int $depth = 0): PromiseInterface
     {
-        $this->logGenerator($flow, $depth-1);
+        $this->logGenerator($flow, $depth - 1);
         list($promise, $resolver, $rejector) = $this->promise();
 
         if (!$flow->valid()) {
