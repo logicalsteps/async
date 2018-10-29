@@ -19,6 +19,6 @@ function status($url)
     return $response->getStatusCode();
 }
 
-$async = new Async(new EchoLogger());
-$async->await(status('http://httpbin.org/get'))->then('trace');
-$async->await(status('http://httpbin.org/missingPage'))->then('trace');
+Async::setLogger(new EchoLogger);
+Async::await(status('http://httpbin.org/get'))->then('trace');
+Async::await(status('http://httpbin.org/missingPage'))->then('trace');

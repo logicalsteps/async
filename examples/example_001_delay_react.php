@@ -73,8 +73,8 @@ function flow()
     return yield $timer->hold(7);
 }
 
-$async = new Async(new EchoLogger);
-//$async->setLoop($loop);
-$async->await(flow());//->then('var_dump');
-#$async->await(flow()); //run another session in parallel
+Async::setLogger(new EchoLogger);
+Async::await(flow());
+//Async::await(flow()); //run another session in parallel
+
 $loop->run();
