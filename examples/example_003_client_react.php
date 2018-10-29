@@ -22,7 +22,7 @@ $status = function ($url) use ($browser) {
 };
 
 $async = new Async(new EchoLogger());
-$async->setLoop($loop);
+//$async->setLoop($loop);
 $async->await($status('http://httpbin.org/get'))->then('trace');
 $async->await($status('http://httpbin.org/missingPage'))->then('trace');
 

@@ -74,7 +74,7 @@ function flow()
 }
 
 $async = new Async(new EchoLogger);
-$async->setLoop($loop);
+//$async->setLoop($loop);
 $async->await(flow());//->then('var_dump');
-$async->await(flow()); //run another session in parallel
+#$async->await(flow()); //run another session in parallel
 $loop->run();
