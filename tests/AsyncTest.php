@@ -86,10 +86,4 @@ class AsyncTest extends TestCase
         $this->assertInstanceOf(PromiseInterface::class, $promise);
     }
 
-    /*
-    public function testSetLogger()
-    {
-
-    }
-    */
 }
