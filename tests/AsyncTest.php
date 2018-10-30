@@ -22,12 +22,11 @@ class AsyncTest extends TestCase
 
     public function testAwaitForCallback()
     {
-        $later = function (callable $callback) {
-            sleep(1);
+        $callable = function (callable $callback) {
             $callback(null, 14);
         };
 
-        $promise = Async::await($later);
+        $promise = Async::await($callable);
         $this->assertInstanceOf(PromiseInterface::class, $promise);
         $this->assertPromiseFulfillsWith($promise, 14);
     }
