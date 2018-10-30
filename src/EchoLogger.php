@@ -52,7 +52,7 @@ class EchoLogger extends AbstractLogger
                 $message = ' ┌▀' . $this->backgroundColor(' start ', 'green');
                 break;
             case 'end':
-                $message = ' └▄' . $this->backgroundColor(' stop ', 'brightRed');
+                $message = ' └▄' . $this->backgroundColor(' stop  ', 'brightRed');
                 break;
             default:
                 if ($this->consoleColors) {
