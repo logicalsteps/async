@@ -6,6 +6,8 @@ namespace LogicalSteps\Async;
 use Closure;
 use Generator;
 use Psr\Log\LoggerInterface;
+use function React\Promise\all;
+use function GuzzleHttp\Promise\all as guzzleAll;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use ReflectionFunctionAbstract;
@@ -13,10 +15,14 @@ use ReflectionGenerator;
 use ReflectionMethod;
 
 /**
- * @method static setLogger(EchoLogger $param)
- * @method static PromiseInterface await($value)
+ * @method PromiseInterface await($process) await for the completion of an asynchronous process
+ * @method static PromiseInterface await($process) await for the completion of an asynchronous process
+ *
+ * @method PromiseInterface awaitAll(array $processes) concurrently await for multiple processes
+ * @method static PromiseInterface awaitAll(array $processes) concurrently await for multiple processes
+ *
  * @method setLogger(EchoLogger $param)
- * @method PromiseInterface await($value)
+ * @method static setLogger(EchoLogger $param)
  */
 class Async
 {
@@ -41,6 +47,13 @@ class Async
      */
     public $waitForGuzzleAndHttplug = true;
 
+    /**
+     * @var bool
+     */
+    protected $parallelGuzzleLoading = false;
+
+    protected $guzzlePromises = [];
+
     public function __construct(LoggerInterface $logger = null)
     {
         if ($logger) {
@@ -52,6 +65,7 @@ class Async
     {
         switch ($name) {
             case 'await':
+            case 'awaitAll':
             case 'setLogger':
                 return call_user_func_array([$this, "_$name"], $arguments);
         }
@@ -66,7 +80,18 @@ class Async
         return $instance->__call($name, $arguments);
     }
 
-    protected function _await($value): PromiseInterface
+    public function _awaitAll(array $processes): PromiseInterface
+    {
+        $this->parallelGuzzleLoading = true;
+        $promise = all(array_map([$this, '_await'], $processes));
+        if (!empty($this->guzzlePromises)) {
+            guzzleAll($this->guzzlePromises)->wait(false);
+            $this->guzzlePromises = [];
+        }
+        return $promise;
+    }
+
+    protected function _await($process): PromiseInterface
     {
         if ($this->logger) {
             $this->logger->info('start');
@@ -85,7 +110,7 @@ class Async
             }
             $resolver($result);
         };
-        $this->_handle($value, $callback, -1);
+        $this->_handle($process, $callback, -1);
         return $promise;
     }
 
@@ -111,29 +136,29 @@ class Async
         return [$promise, $resolver, $rejector];
     }
 
-    protected function _handle($value, callable $callback, int $depth = 0)
+    protected function _handle($process, callable $callback, int $depth = 0)
     {
         $arguments = [];
         $func = [];
-        if (is_array($value) && count($value) > 1) {
-            $func[] = array_shift($value);
+        if (is_array($process) && count($process) > 1) {
+            $func[] = array_shift($process);
             if (is_callable($func[0])) {
                 $func = $func[0];
             } else {
-                $func[] = array_shift($value);
+                $func[] = array_shift($process);
             }
-            $arguments = $value;
+            $arguments = $process;
         } else {
-            $func = $value;
+            $func = $process;
         }
         if (is_callable($func)) {
             $this->_handleCallback($func, $arguments, $callback, $depth);
-        } elseif ($value instanceof Generator) {
-            $this->_handleGenerator($value, $callback, 1 + $depth);
-        } elseif (is_object($value) && $implements = array_intersect(class_implements($value), Async::$knownPromises)) {
-            $this->_handlePromise($value, array_shift($implements), $callback, $depth);
+        } elseif ($process instanceof Generator) {
+            $this->_handleGenerator($process, $callback, 1 + $depth);
+        } elseif (is_object($process) && $implements = array_intersect(class_implements($process), Async::$knownPromises)) {
+            $this->_handlePromise($process, array_shift($implements), $callback, $depth);
         } else {
-            $callback(null, $value);
+            $callback(null, $process);
         }
     }
 
@@ -168,8 +193,10 @@ class Async
      *
      * @param \React\Promise\PromiseInterface|\GuzzleHttp\Promise\PromiseInterface|\Amp\Promise|\Http\Promise\Promise $knownPromise
      * @param string $interface
+     * @param callable $callback
      * @param int $depth
-     * @return PromiseInterface
+     * @return void
+     * @throws \Exception
      */
     protected function _handlePromise($knownPromise, string $interface, callable $callback, int $depth = 0)
     {
@@ -185,6 +212,15 @@ class Async
                 $knownPromise->then($resolver, $rejector);
                 break;
             case static::PROMISE_GUZZLE:
+                $knownPromise->then($resolver, $rejector);
+                if ($this->waitForGuzzleAndHttplug) {
+                    if ($this->parallelGuzzleLoading) {
+                        $this->guzzlePromises[] = $knownPromise;
+                    } else {
+                        $knownPromise->wait(false);
+                    }
+                }
+                break;
             case static::PROMISE_HTTP:
                 $knownPromise->then($resolver, $rejector);
                 if ($this->waitForGuzzleAndHttplug) {
