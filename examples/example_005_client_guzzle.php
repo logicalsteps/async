@@ -22,3 +22,5 @@ function status($url)
 Async::setLogger(new EchoLogger);
 Async::await(status('http://httpbin.org/get'))->then('trace');
 Async::await(status('http://httpbin.org/missingPage'))->then('trace');
+
+Async::awaitAll([status('http://httpbin.org/get'),status('http://httpbin.org/missingPage')])->then('trace');

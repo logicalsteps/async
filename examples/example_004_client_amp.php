@@ -23,4 +23,6 @@ $async = new Async(new EchoLogger());
 $async->await($status('http://httpbin.org/get'))->then('trace');
 $async->await($status('http://httpbin.org/missingPage'))->then('trace');
 
+//$async->awaitAll([$status('http://httpbin.org/get'), $status('http://httpbin.org/missingPage')])->then('trace');
+
 Loop::run();

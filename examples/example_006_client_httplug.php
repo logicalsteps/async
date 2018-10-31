@@ -26,3 +26,5 @@ function status($url)
 $async = new Async(new EchoLogger());
 $async->await(status('http://httplug.io'))->then('trace');
 $async->await(status('http://httplug.io/missingPage'))->then('trace');
+
+$async->awaitAll([status('http://httplug.io'),status('http://httplug.io/missingPage')])->then('trace');
