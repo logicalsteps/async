@@ -36,6 +36,20 @@ class AsyncTest extends TestCase
         $this->assertPromiseFulfillsWith($promise, 14);
     }
 
+    public function testAwaitForFailedCallback()
+    {
+        $callable = function (callable $callback) {
+            $callback('failed callback');
+        };
+
+        $promise = Async::await($callable);
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $promise->then(function ($value, $error) {
+            $this->assertEquals($error, 'failed callback');
+        });
+        $this->assertPromiseRejects($promise);
+    }
+
     public function testAwaitForGenerator()
     {
         function gen()
