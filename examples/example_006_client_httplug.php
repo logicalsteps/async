@@ -3,7 +3,7 @@
 use Http\Discovery\HttpAsyncClientDiscovery;
 use Http\Discovery\MessageFactoryDiscovery;
 use LogicalSteps\Async\Async;
-use LogicalSteps\Async\EchoLogger;
+use LogicalSteps\Async\ConsoleLogger;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -23,7 +23,7 @@ function status($url)
     return $response->getStatusCode();
 }
 
-$async = new Async(new EchoLogger());
+$async = new Async(new ConsoleLogger());
 $async->await(status('http://httplug.io'))->then('trace');
 $async->await(status('http://httplug.io/missingPage'))->then('trace');
 

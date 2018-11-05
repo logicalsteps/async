@@ -2,7 +2,7 @@
 
 use Clue\React\Buzz\Browser;
 use LogicalSteps\Async\Async;
-use LogicalSteps\Async\EchoLogger;
+use LogicalSteps\Async\ConsoleLogger;
 use React\EventLoop\Factory;
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -21,7 +21,7 @@ $status = function ($url) use ($browser) {
     return $code; //$response->getStatusCode();
 };
 
-Async::setLogger(new EchoLogger);
+Async::setLogger(new ConsoleLogger);
 Async::await($status('http://httpbin.org/get'))->then('trace');
 Async::await($status('http://httpbin.org/missingPage'))->then('trace');
 

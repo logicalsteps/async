@@ -3,7 +3,7 @@
 use Amp\Deferred;
 use Amp\Loop;
 use LogicalSteps\Async\Async;
-use LogicalSteps\Async\EchoLogger;
+use LogicalSteps\Async\ConsoleLogger;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -65,7 +65,7 @@ function flow()
     return yield $timer->hold(7);
 }
 
-$async = new Async(new EchoLogger());
+$async = new Async(new ConsoleLogger());
 $async->await(flow());
 //$async->await(flow()); //run another session in parallel
 

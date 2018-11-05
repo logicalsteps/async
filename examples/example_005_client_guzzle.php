@@ -2,7 +2,7 @@
 
 use GuzzleHttp\Client;
 use LogicalSteps\Async\Async;
-use LogicalSteps\Async\EchoLogger;
+use LogicalSteps\Async\ConsoleLogger;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -19,7 +19,7 @@ function status($url)
     return $response->getStatusCode();
 }
 
-Async::setLogger(new EchoLogger);
+Async::setLogger(new ConsoleLogger);
 Async::await(status('http://httpbin.org/get'))->then('trace');
 Async::await(status('http://httpbin.org/missingPage'))->then('trace');
 

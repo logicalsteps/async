@@ -6,7 +6,7 @@ namespace LogicalSteps\Async;
 
 use Psr\Log\AbstractLogger;
 
-class EchoLogger extends AbstractLogger
+class ConsoleLogger extends AbstractLogger
 {
     private $startTime;
 
@@ -29,8 +29,16 @@ class EchoLogger extends AbstractLogger
         'white' => 97
     ];
 
-    public function __construct()
+    /**
+     * @var callable
+     */
+    private $echo;
+
+    public function __construct(callable $loggingFunction = null)
     {
+        $this->echo = $loggingFunction ?? function ($message) {
+                echo $message;
+            };
         $this->startTime = microtime(true);
     }
 
@@ -65,8 +73,8 @@ class EchoLogger extends AbstractLogger
                 $message = $depth . $message;
         }
         $elapsed = round((microtime(true) - $this->startTime));
-        echo ' ' . str_pad((string)$elapsed, 5, '0', STR_PAD_LEFT)
-            . ' ' . $this->backgroundColor("[$level]", 'cyan') . $message . PHP_EOL;
+        ($this->echo)(' ' . str_pad((string)$elapsed, 5, '0', STR_PAD_LEFT)
+            . ' ' . $this->backgroundColor("[$level]", 'cyan') . $message . PHP_EOL);
     }
 
     private function color(string $text, string $color)
