@@ -16,14 +16,14 @@ use ReflectionMethod;
 use Throwable;
 
 /**
- * @method PromiseInterface await($process) await for the completion of an asynchronous process
  * @method static PromiseInterface await($process) await for the completion of an asynchronous process
+ * @method PromiseInterface await($process) await for the completion of an asynchronous process
  *
- * @method PromiseInterface awaitAll(array $processes) concurrently await for multiple processes
  * @method static PromiseInterface awaitAll(array $processes) concurrently await for multiple processes
+ * @method PromiseInterface awaitAll(array $processes) concurrently await for multiple processes
  *
- * @method setLogger(EchoLogger $param)
  * @method static setLogger(EchoLogger $param)
+ * @method setLogger(EchoLogger $param)
  */
 class Async
 {
