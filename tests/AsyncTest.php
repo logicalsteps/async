@@ -62,6 +62,22 @@ class AsyncTest extends TestCase
         $this->assertPromiseFulfillsWith($promise, 28);
     }
 
+    public function testAwaitForGeneratorException()
+    {
+        function genF()
+        {
+            throw new Exception('failed generator');
+            return yield 28;
+        }
+
+        $promise = Async::await(genF());
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $promise->then(function ($value, $error) {
+            $this->assertEquals($error, 'failed generator');
+        });
+        $this->assertPromiseRejects($promise);
+    }
+
     public function testAwaitForReactPromise()
     {
         $knownPromise = new ReactPromise(function ($resolver) {
