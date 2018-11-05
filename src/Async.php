@@ -205,7 +205,7 @@ class Async
             $callback(null, $result);
         };
         $rejector = function ($error) use ($callback) {
-            $callback($error);
+            $callback($error, null);
         };
         switch ($interface) {
             case static::PROMISE_REACT:
