@@ -13,6 +13,7 @@ use React\Promise\PromiseInterface;
 use ReflectionFunctionAbstract;
 use ReflectionGenerator;
 use ReflectionMethod;
+use Throwable;
 
 /**
  * @method PromiseInterface await($process) await for the completion of an asynchronous process
@@ -175,18 +176,23 @@ class Async
     {
         $this->logGenerator($flow, $depth - 1);
 
-        if (!$flow->valid()) {
-            return $callback(null, $flow->getReturn());
-        }
-        $value = $flow->current();
-        $next = function ($error, $result) use ($flow, $callback, $depth) {
-            if ($error) {
-                return $callback($error);
+        try {
+            if (!$flow->valid()) {
+                $callback(null, $flow->getReturn());
+                return;
             }
-            $flow->send($result);
-            $this->_handleGenerator($flow, $callback, $depth);
-        };
-        $this->_handle($value, $next, $depth);
+            $value = $flow->current();
+            $next = function ($error, $result) use ($flow, $callback, $depth) {
+                if ($error) {
+                    return $callback($error);
+                }
+                $flow->send($result);
+                $this->_handleGenerator($flow, $callback, $depth);
+            };
+            $this->_handle($value, $next, $depth);
+        } catch (Throwable $throwable) {
+            $callback($throwable);
+        }
     }
 
     /**
