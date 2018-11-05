@@ -97,7 +97,7 @@ class Async
             $this->logger->info('start');
         }
         list($promise, $resolver, $rejector) = $this->promise();
-        $callback = function ($error, $result) use ($resolver, $rejector) {
+        $callback = function ($error, $result = null) use ($resolver, $rejector) {
             if ($error) {
                 if ($this->logger) {
                     $this->logger->info('end');
@@ -155,7 +155,8 @@ class Async
             $this->_handleCallback($func, $arguments, $callback, $depth);
         } elseif ($process instanceof Generator) {
             $this->_handleGenerator($process, $callback, 1 + $depth);
-        } elseif (is_object($process) && $implements = array_intersect(class_implements($process), Async::$knownPromises)) {
+        } elseif (is_object($process) && $implements = array_intersect(class_implements($process),
+                Async::$knownPromises)) {
             $this->_handlePromise($process, array_shift($implements), $callback, $depth);
         } else {
             $callback(null, $process);
