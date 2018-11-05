@@ -22,8 +22,8 @@ use Throwable;
  * @method static PromiseInterface awaitAll(array $processes) concurrently await for multiple processes
  * @method PromiseInterface awaitAll(array $processes) concurrently await for multiple processes
  *
- * @method static setLogger(EchoLogger $param)
- * @method setLogger(EchoLogger $param)
+ * @method static setLogger(LoggerInterface $param)
+ * @method setLogger(LoggerInterface $param)
  */
 class Async
 {
