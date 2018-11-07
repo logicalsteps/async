@@ -142,13 +142,14 @@ class Async
         $arguments = [];
         $func = [];
         if (is_array($process) && count($process) > 1) {
-            $func[] = array_shift($process);
+            $copy = $process;
+            $func[] = array_shift($copy);
             if (is_callable($func[0])) {
                 $func = $func[0];
             } else {
-                $func[] = array_shift($process);
+                $func[] = array_shift($copy);
             }
-            $arguments = $process;
+            $arguments = $copy;
         } else {
             $func = $process;
         }
