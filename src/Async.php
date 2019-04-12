@@ -10,9 +10,12 @@ use function React\Promise\all;
 use function GuzzleHttp\Promise\all as guzzleAll;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
+use ReflectionException;
+use ReflectionFunction;
 use ReflectionFunctionAbstract;
 use ReflectionGenerator;
 use ReflectionMethod;
+use ReflectionObject;
 use Throwable;
 
 /**
@@ -169,6 +172,26 @@ class Async
     protected function _handleCallback(callable $callable, array $parameters, callable $callback, int $depth = 0)
     {
         $this->logCallback($callable, $parameters, $depth);
+        try {
+            if(is_array($callable)) {
+                $rf = new ReflectionMethod($callable[0], $callable[1]);
+            } elseif(is_string($callable)) {
+                $rf = new ReflectionFunction($callable);
+            } elseif(is_a($callable, 'Closure') || is_callable($callable, '__invoke')) {
+                $ro = new ReflectionObject($callable);
+                $rf    = $ro->getMethod('__invoke');
+            }
+            $current = count($parameters);
+            $total = $rf->getNumberOfParameters();
+            $ps = $rf->getParameters();
+            if ($current + 1 < $total) {
+                for ($i = $current; $i < $total - 1; $i++) {
+                    $parameters[$i] = $ps[$i]->isDefaultValueAvailable() ? $ps[$i]->getDefaultValue() : null;
+                }
+            }
+        } catch (ReflectionException $e) {
+            //ignore
+        }
         $parameters[] = $callback;
         call_user_func_array($callable, $parameters);
     }
