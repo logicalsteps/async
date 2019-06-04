@@ -208,14 +208,14 @@ class Async
             $value = $flow->current();
             $next = function ($error, $result) use ($flow, $callback, $depth) {
                 if ($error) {
-                    return $callback($error);
+                    return $callback($error, null);
                 }
                 $flow->send($result);
                 $this->_handleGenerator($flow, $callback, $depth);
             };
             $this->_handle($value, $next, $depth);
         } catch (Throwable $throwable) {
-            $callback($throwable);
+            $callback($throwable, null);
         }
     }
 
