@@ -159,7 +159,15 @@ class Async
         if (is_callable($func)) {
             $this->_handleCallback($func, $arguments, $callback, $depth);
         } elseif ($process instanceof Generator) {
-            $this->_handleGenerator($process, $callback, 1 + $depth);
+            $callback2 = function ($error, $result) use ($process, $callback, $depth) {
+                if ($error instanceof Throwable) {
+                    $process->throw($error);
+                    $this->_handleGenerator($process, $callback, $depth);
+                    return;
+                }
+                $callback($error, $result);
+            };
+            $this->_handleGenerator($process, $callback2, 1 + $depth);
         } elseif (is_object($process) && $implements = array_intersect(class_implements($process),
                 Async::$knownPromises)) {
             $this->_handlePromise($process, array_shift($implements), $callback, $depth);
