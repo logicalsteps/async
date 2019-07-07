@@ -206,6 +206,9 @@ class Async
                 return;
             }
             $value = $flow->current();
+            if ($value instanceof Throwable) {
+                return $callback($value, null);
+            }
             $next = function ($error, $result) use ($flow, $callback, $depth) {
                 if ($error) {
                     return $callback($error, null);
