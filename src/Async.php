@@ -160,7 +160,10 @@ class Async
             $this->_handleCallback($func, $arguments, $callback, $depth);
         } elseif ($process instanceof Generator) {
             $callback2 = function ($error, $result) use ($process, $callback, $depth) {
-                if ($error instanceof Throwable) {
+                if ($error instanceof Throwable &&
+                    is_string($process->key()) &&
+                    is_a($process->key(), get_class($error), true)
+                ) {
                     $process->throw($error);
                     $this->_handleGenerator($process, $callback, $depth);
                     return;
@@ -181,13 +184,13 @@ class Async
     {
         $this->logCallback($callable, $parameters, $depth);
         try {
-            if(is_array($callable)) {
+            if (is_array($callable)) {
                 $rf = new ReflectionMethod($callable[0], $callable[1]);
-            } elseif(is_string($callable)) {
+            } elseif (is_string($callable)) {
                 $rf = new ReflectionFunction($callable);
-            } elseif(is_a($callable, 'Closure') || is_callable($callable, '__invoke')) {
+            } elseif (is_a($callable, 'Closure') || is_callable($callable, '__invoke')) {
                 $ro = new ReflectionObject($callable);
-                $rf    = $ro->getMethod('__invoke');
+                $rf = $ro->getMethod('__invoke');
             }
             $current = count($parameters);
             $total = $rf->getNumberOfParameters();
