@@ -159,18 +159,7 @@ class Async
         if (is_callable($func)) {
             $this->_handleCallback($func, $arguments, $callback, $depth);
         } elseif ($process instanceof Generator) {
-            $callback2 = function ($error, $result) use ($process, $callback, $depth) {
-                if ($error instanceof Throwable &&
-                    is_string($process->key()) &&
-                    is_a($process->key(), get_class($error), true)
-                ) {
-                    $process->throw($error);
-                    $this->_handleGenerator($process, $callback, $depth);
-                    return;
-                }
-                $callback($error, $result);
-            };
-            $this->_handleGenerator($process, $callback2, 1 + $depth);
+            $this->_handleGenerator($process, $callback, 1 + $depth);
         } elseif (is_object($process) && $implements = array_intersect(class_implements($process),
                 Async::$knownPromises)) {
             $this->_handlePromise($process, array_shift($implements), $callback, $depth);
@@ -218,11 +207,24 @@ class Async
             }
             $value = $flow->current();
             if ($value instanceof Throwable) {
-                return $callback($value, null);
+                if (is_string($flow->key()) && is_a($flow->key(), get_class($value), true)) {
+                    $flow->throw($value);
+                    $this->_handleGenerator($flow, $callback, $depth);
+                    return;
+                } else {
+                    return $callback($value, null);
+                }
             }
             $next = function ($error, $result) use ($flow, $callback, $depth) {
                 if ($error) {
-                    return $callback($error, null);
+                    if ($error instanceof Throwable && is_string($flow->key()) && is_a($flow->key(), get_class($error),
+                            true)) {
+                        $flow->throw($error);
+                        $this->_handleGenerator($flow, $callback, $depth);
+                        return;
+                    } else {
+                        return $callback($error, null);
+                    }
                 }
                 $flow->send($result);
                 $this->_handleGenerator($flow, $callback, $depth);
