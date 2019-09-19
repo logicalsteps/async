@@ -274,7 +274,7 @@ class Async
     {
         $commands = $this->parse($flow->key());
         if ($value instanceof Throwable) {
-            if (isset($commands['throw']) && is_a($commands['throw'], get_class($value), true)) {
+            if (isset($commands['throw']) && is_a($value, $commands['throw'])) {
                 $flow->throw($value);
                 $this->_handleGenerator($flow, $callback, $depth);
                 return true; //stop
@@ -290,7 +290,7 @@ class Async
         $arr = [];
         if (strlen($command)) {
             parse_str(str_replace(['|', ':'], ['&', '='], $command), $arr);
-            $arr = array_map('str_getcsv', $arr);
+            //$arr = array_map('str_getcsv', $arr);
         }
         return $arr;
     }
