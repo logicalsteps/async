@@ -36,6 +36,11 @@ class Async
     const PROMISE_GUZZLE = 'GuzzleHttp\Promise\PromiseInterface';
     const PROMISE_HTTP = 'Http\Promise\Promise';
 
+    const promise = 'promise';
+    const parallel = 'parallel';
+    const all = 'all';
+    const await = 'await';
+
     public static $knownPromises = [
         self::PROMISE_REACT,
         self::PROMISE_AMP,
@@ -330,6 +335,30 @@ class Async
             $callback($value, null);
             return true; //stop
         }
+        if (isset($commands[self::parallel])) {
+            if (!isset($flow->parallel)) {
+                $flow->parallel = [];
+            }
+            $flow->parallel [] = $value;
+            return true; //stop
+        }
+
+        if (isset($commands[self::all])) {
+            if (!isset($flow->parallel)) {
+                $callback(null, []);
+                return true;
+            }
+            $this->_awaitAll($flow->parallel)->then(
+                function (array $all) use ($callback) {
+                    $callback(null, $all);
+                },
+                function ($err) use ($callback) {
+                    $callback($err, false);
+                }
+            );
+            return true; //stop
+        }
+
         return false; //continue
     }
 
