@@ -173,13 +173,13 @@ class Async
     {
         $this->logCallback($callable, $parameters, $depth);
         try {
-            if(is_array($callable)) {
+            if (is_array($callable)) {
                 $rf = new ReflectionMethod($callable[0], $callable[1]);
-            } elseif(is_string($callable)) {
+            } elseif (is_string($callable)) {
                 $rf = new ReflectionFunction($callable);
-            } elseif(is_a($callable, 'Closure') || is_callable($callable, '__invoke')) {
+            } elseif (is_a($callable, 'Closure') || is_callable($callable, '__invoke')) {
                 $ro = new ReflectionObject($callable);
-                $rf    = $ro->getMethod('__invoke');
+                $rf = $ro->getMethod('__invoke');
             }
             $current = count($parameters);
             $total = $rf->getNumberOfParameters();
@@ -268,6 +268,31 @@ class Async
                     });
                 break;
         }
+    }
+
+    private function handleCommand(Generator $flow, $value, callable $callback, int $depth): bool
+    {
+        $commands = $this->parse($flow->key());
+        if ($value instanceof Throwable) {
+            if (isset($commands['throw']) && is_a($commands['throw'], get_class($value), true)) {
+                $flow->throw($value);
+                $this->_handleGenerator($flow, $callback, $depth);
+                return true; //stop
+            }
+            $callback($value, null);
+            return true; //stop
+        }
+        return false; //continue
+    }
+
+    private function parse(string $command): array
+    {
+        $arr = [];
+        if (strlen($command)) {
+            parse_str(str_replace(['|', ':'], ['&', '='], $command), $arr);
+            $arr = array_map('str_getcsv', $arr);
+        }
+        return $arr;
     }
 
     private function logCallback(callable $callable, array $parameters, int $depth = 0)
