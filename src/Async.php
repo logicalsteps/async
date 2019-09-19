@@ -206,12 +206,12 @@ class Async
                 return;
             }
             $value = $flow->current();
-            if ($value instanceof Throwable) {
-                return $callback($value, null);
+            if ($this->handleCommand($flow, $value, $callback, $depth)) {
+                return;
             }
             $next = function ($error, $result) use ($flow, $callback, $depth) {
-                if ($error) {
-                    return $callback($error, null);
+                if ($this->handleCommand($flow, $error ?: $result, $callback, $depth)) {
+                    return;
                 }
                 $flow->send($result);
                 $this->_handleGenerator($flow, $callback, $depth);
