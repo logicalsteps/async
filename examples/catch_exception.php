@@ -5,6 +5,12 @@ use LogicalSteps\Async\ConsoleLogger;
 
 require __DIR__ . '/../vendor/autoload.php';
 
+function blow()
+{
+    yield;
+    yield blast();
+}
+
 function blast()
 {
     yield;
@@ -15,7 +21,7 @@ function run()
 {
     yield 1;
     try {
-        yield 'throw:' . Throwable::class => blast();
+        yield 'throw:' . Throwable::class => blow();
     } catch (Throwable $t) {
 
     }
