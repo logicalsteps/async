@@ -1,7 +1,7 @@
 <?php
 
 use LogicalSteps\Async\Async;
-use LogicalSteps\Async\Commands;
+use LogicalSteps\Async\Action;
 use LogicalSteps\Async\ConsoleLogger;
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -11,7 +11,7 @@ function blow()
 {
     yield;
     try {
-        yield Commands::throw(Exception::class) => blast();
+        yield Async::throw(Exception::class) => blast();
     } catch (Exception $e) {
         throw new Exception('blow', 0, $e);
     }
@@ -27,7 +27,7 @@ function run()
 {
     yield 1;
     try {
-        yield Commands::throw(Exception::class) => blow();
+        yield Async::throw(Exception::class) => blow();
     } catch (Exception $e) {
         echo 'catch ' . get_class($e) . ': ' . $e->getMessage() . PHP_EOL;
     }

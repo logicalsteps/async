@@ -6,6 +6,7 @@ namespace LogicalSteps\Async;
 use Closure;
 use Generator;
 use Psr\Log\LoggerInterface;
+use TypeError;
 use function React\Promise\all;
 use function GuzzleHttp\Promise\all as guzzleAll;
 use React\Promise\Promise;
@@ -73,6 +74,7 @@ class Async
             case 'setLogger':
                 return call_user_func_array([$this, "_$name"], $arguments);
         }
+        return null;
     }
 
     public static function __callStatic($name, $arguments)
@@ -82,6 +84,52 @@ class Async
             $instance = new static();
         }
         return $instance->__call($name, $arguments);
+    }
+
+    /**
+     * Throws specified or subclasses of specified exception inside the generator class so that it can be handled.
+     *
+     * @param string $throwable
+     * @return string command
+     *
+     * @throws TypeError when given value is not a valid exception
+     */
+    public static function throw(string $throwable): string
+    {
+        if (is_a($throwable, Throwable::class, true)) {
+            return __FUNCTION__ . ':' . $throwable;
+        }
+        throw new TypeError('Invalid value for throwable, it must extend Throwable class');
+    }
+
+    /**
+     * Run this side by side with the remainder of the process
+     *
+     * @return string
+     */
+    public static function parallel(): string
+    {
+        return __FUNCTION__;
+    }
+
+    /**
+     * Await for all parallel processes previously to finish
+     *
+     * @return string
+     */
+    public static function all(): string
+    {
+        return __FUNCTION__;
+    }
+
+    /**
+     * Return a promise instead of awaiting the response of the process
+     *
+     * @return string
+     */
+    public static function promise(): string
+    {
+        return __FUNCTION__;
     }
 
     public function _awaitAll(array $processes): PromiseInterface
@@ -100,7 +148,7 @@ class Async
         if ($this->logger) {
             $this->logger->info('start');
         }
-        list($promise, $resolver, $rejector) = $this->promise();
+        list($promise, $resolver, $rejector) = $this->makePromise();
         $callback = function ($error, $result = null) use ($resolver, $rejector) {
             if ($error) {
                 if ($this->logger) {
@@ -130,7 +178,7 @@ class Async
         $this->logger = $logger;
     }
 
-    private function promise()
+    private function makePromise()
     {
         $resolver = $rejector = null;
         $promise = new Promise(function ($resolve, $reject, $notify) use (&$resolver, &$rejector) {
