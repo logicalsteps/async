@@ -1,31 +1,37 @@
 <?php
 
 use LogicalSteps\Async\Async;
+use LogicalSteps\Async\Commands;
 use LogicalSteps\Async\ConsoleLogger;
 
 require __DIR__ . '/../vendor/autoload.php';
 
+
 function blow()
 {
     yield;
-    yield blast();
+    try {
+        yield Commands::throw(Exception::class) => blast();
+    } catch (Exception $e) {
+        throw new Exception('blow', 0, $e);
+    }
 }
 
 function blast()
 {
     yield;
-    throw new Exception('outside');
+    throw new Exception('blast');
 }
 
 function run()
 {
     yield 1;
     try {
-        yield 'throw:' . Throwable::class => blow();
-    } catch (Throwable $t) {
-
+        yield Commands::throw(Exception::class) => blow();
+    } catch (Exception $e) {
+        echo 'catch ' . get_class($e) . ': ' . $e->getMessage() . PHP_EOL;
     }
-    return true;
+    return 'run completed';
 }
 
 //Async::setLogger(new ConsoleLogger);
