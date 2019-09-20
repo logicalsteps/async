@@ -28,12 +28,16 @@ function flow()
     return true;
 }
 
-Async::setLogger(new ConsoleLogger);
-//Async::await(flow());
-
-function trace(string $key, $value)
+function trace(string $key, $value = null)
 {
-    echo sprintf("%s: %s\n", $key, json_encode($value));
+    static $startTime;
+    if (!$startTime) {
+        $startTime = microtime(true);
+    }
+    $elapsed = round((microtime(true) - $startTime));
+    if ($value) {
+        echo sprintf("%04d - %s: %s\n", $elapsed, $key, json_encode($value));
+    }
 }
 
 function step(string $key, $value, Generator $flow, callable $next)
@@ -68,7 +72,7 @@ function step(string $key, $value, Generator $flow, callable $next)
 function async(Generator $flow, callable $callback)
 {
     if (!$flow->valid()) {
-        trace('return', $r = $flow->getReturn());
+        $r = $flow->getReturn();
         $callback(null, $r);
         return;
     }
@@ -83,15 +87,11 @@ function async(Generator $flow, callable $callback)
     step($key, $value, $flow, $next);
 }
 
-/*
-runFor(flow());
-echo '-----------------------' . PHP_EOL;
-runManual(flow());
-echo '-----------------------' . PHP_EOL;
-runRecursive(flow());
-echo '-----------------------' . PHP_EOL;
-*/
+trace('start');
 async(flow(), function ($error, $result) {
     var_dump($result);
 });
+
+//Async::setLogger(new ConsoleLogger);
+//Async::await(flow());
 $loop->run();
