@@ -40,8 +40,21 @@ function trace(string $key, $value = null)
     }
 }
 
-function step(string $key, $value, Generator $flow, callable $next)
+function async(Generator $flow, callable $callback)
 {
+    if (!$flow->valid()) {
+        $r = $flow->getReturn();
+        $callback(null, $r);
+        return;
+    }
+    $key = $flow->key() ?: Async::await;
+    $value = $flow->current();
+    $next = function ($error, $result) use ($flow, $key, $callback) {
+        $value = $error ?: $result;
+        trace($key, $value);
+        $flow->send($value);
+        async($flow, $callback);
+    };
     switch ($key) {
         case Async::parallel:
             if (!isset($flow->parallel)) {
@@ -67,24 +80,6 @@ function step(string $key, $value, Generator $flow, callable $next)
     } else {
         $next(null, $value);
     }
-}
-
-function async(Generator $flow, callable $callback)
-{
-    if (!$flow->valid()) {
-        $r = $flow->getReturn();
-        $callback(null, $r);
-        return;
-    }
-    $key = $flow->key() ?: Async::await;
-    $value = $flow->current();
-    $next = function ($error, $result) use ($flow, $key, $callback) {
-        $value = $error ?: $result;
-        trace($key, $value);
-        $flow->send($value);
-        async($flow, $callback);
-    };
-    step($key, $value, $flow, $next);
 }
 
 trace('start');
