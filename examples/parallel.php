@@ -13,8 +13,8 @@ $loop = Factory::create();
 function wait(int $delay, callable $call_back)
 {
     global $loop;
-    $loop->addTimer($delay, function () use ($call_back) {
-        $call_back(null, true);
+    $loop->addTimer($delay, function () use ($delay, $call_back) {
+        $call_back(null, "waited for $delay");
     });
 }
 
@@ -23,7 +23,7 @@ function flow()
     yield ['wait', 2];
     yield Async::parallel => ['wait', 3];
     yield Async::parallel => ['wait', 5];
-    yield Async::all => null;
+    yield Async::all => Async::parallel;
     echo 'finished.' . PHP_EOL;
     return true;
 }
@@ -43,9 +43,8 @@ function step(string $key, $value, Generator $f, callable $callback)
             if (!isset($f->parallel)) {
                 $f->parallel = [];
             }
-            $promise = Async::await($value);
-            $f->parallel[] = $promise;
-            return $callback(null, $promise);
+            $f->parallel[] = $value;
+            return $callback(null, $value);
         case Async::all:
             if (!isset($f->parallel)) {
                 $callback(null, $value);
@@ -73,9 +72,12 @@ function async(Generator $f, callable $callback)
         $callback(null, $r);
         return;
     }
-    trace($key = $f->key(), $value = $f->current());
-    $next = function ($error, $result) use ($f, $callback) {
-        $f->send($result);
+    $key = $f->key() ?: Async::await;
+    $value = $f->current();
+    $next = function ($error, $result) use ($f, $key, $callback) {
+        $value = $error ?: $result;
+        trace($key, $value);
+        $f->send($value);
         async($f, $callback);
     };
     step($key, $value, $f, $next);
