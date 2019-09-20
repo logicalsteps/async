@@ -25,9 +25,51 @@ function flow()
     yield Async::parallel() => ['wait', 5];
     yield Async::all() => null;
     echo 'all completed.' . PHP_EOL;
+    return true;
 }
 
 Async::setLogger(new ConsoleLogger);
-Async::await(flow());
+//Async::await(flow());
 
+function trace(string $key, $value)
+{
+    echo sprintf("%s: %s\n", $key, json_encode($value));
+}
+
+function runFor(Generator $f)
+{
+    foreach ($f as $key => $value) {
+        trace($key, $value);
+    }
+    trace('return', $f->getReturn());
+}
+
+function runManual(Generator $f)
+{
+    trace($f->key(), $f->current());
+    while ($f->valid()) {
+        $value = $f->send(null);
+        if ($f->valid()) {
+            trace($f->key(), $value);
+        }
+    }
+    trace('return', $f->getReturn());
+}
+
+function runRecursive(Generator $f)
+{
+    if (!$f->valid()) {
+        trace('return', $f->getReturn());
+        return;
+    }
+    trace($f->key(), $f->current());
+    $f->send(null);
+    runRecursive($f);
+}
+
+runFor(flow());
+echo '-----------------------' . PHP_EOL;
+runManual(flow());
+echo '-----------------------' . PHP_EOL;
+runRecursive(flow());
 $loop->run();
