@@ -36,51 +36,51 @@ function trace(string $key, $value)
     echo sprintf("%s: %s\n", $key, json_encode($value));
 }
 
-function step(string $key, $value, Generator $f, callable $callback)
+function step(string $key, $value, Generator $flow, callable $next)
 {
     switch ($key) {
         case Async::parallel:
-            if (!isset($f->parallel)) {
-                $f->parallel = [];
+            if (!isset($flow->parallel)) {
+                $flow->parallel = [];
             }
-            $f->parallel[] = $value;
-            return $callback(null, $value);
+            $flow->parallel[] = $value;
+            return $next(null, $value);
         case Async::all:
-            if (!isset($f->parallel)) {
-                $callback(null, $value);
+            if (!isset($flow->parallel)) {
+                $next(null, $value);
             }
-            return Async::awaitAll($f->parallel)->then(
-                function ($result) use ($callback) {
-                    $callback(null, $result);
+            return Async::awaitAll($flow->parallel)->then(
+                function ($result) use ($next) {
+                    $next(null, $result);
                 },
-                function ($error) use ($callback) {
-                    $callback($error, null);
+                function ($error) use ($next) {
+                    $next($error, null);
                 }
             );
     }
     if (is_array($value)) {
-        call_user_func($value[0], $value[1], $callback);
+        call_user_func($value[0], $value[1], $next);
     } else {
-        $callback(null, $value);
+        $next(null, $value);
     }
 }
 
-function async(Generator $f, callable $callback)
+function async(Generator $flow, callable $callback)
 {
-    if (!$f->valid()) {
-        trace('return', $r = $f->getReturn());
+    if (!$flow->valid()) {
+        trace('return', $r = $flow->getReturn());
         $callback(null, $r);
         return;
     }
-    $key = $f->key() ?: Async::await;
-    $value = $f->current();
-    $next = function ($error, $result) use ($f, $key, $callback) {
+    $key = $flow->key() ?: Async::await;
+    $value = $flow->current();
+    $next = function ($error, $result) use ($flow, $key, $callback) {
         $value = $error ?: $result;
         trace($key, $value);
-        $f->send($value);
-        async($f, $callback);
+        $flow->send($value);
+        async($flow, $callback);
     };
-    step($key, $value, $f, $next);
+    step($key, $value, $flow, $next);
 }
 
 /*
