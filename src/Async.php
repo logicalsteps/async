@@ -252,23 +252,48 @@ class Async
     protected function _handleGenerator(Generator $flow, callable $callback, int $depth = 0)
     {
         $this->logGenerator($flow, $depth - 1);
-
         try {
             if (!$flow->valid()) {
                 $callback(null, $flow->getReturn());
                 return;
             }
             $value = $flow->current();
-            if ($this->handleCommand($flow, $value, $callback, $depth)) {
-                return;
-            }
-            $next = function ($error, $result) use ($flow, $callback, $depth) {
-                if ($this->handleCommand($flow, $error ?: $result, $callback, $depth)) {
-                    return;
+            $actions = $this->parse($flow->key() ?: Async::await);
+            $next = function ($error, $result) use ($flow, $actions, $callback, $depth) {
+                $value = $error ?: $result;
+                if ($value instanceof Throwable) {
+                    if (isset($actions['throw']) && is_a($value, $actions['throw'])) {
+                        $flow->throw($value);
+                        $this->_handleGenerator($flow, $callback, $depth);
+                        return true; //stop
+                    }
+                    $callback($value, null);
+                    return true; //stop
                 }
-                $flow->send($result);
+                $flow->send($value);
                 $this->_handleGenerator($flow, $callback, $depth);
             };
+            if (key_exists(self::parallel, $actions)) {
+                if (!isset($flow->parallel)) {
+                    $flow->parallel = [];
+                }
+                $flow->parallel[] = $value;
+                return $next(null, $value);
+            }
+            if (key_exists(self::all, $actions)) {
+                $processes = Async::parallel === $value && isset($flow->parallel) ? $flow->parallel : $value;
+                if (is_array($processes) && count($processes)) {
+                    return $this->_awaitAll($processes)->then(
+                        function ($result) use ($next) {
+                            $next(null, $result);
+                        },
+                        function ($error) use ($next) {
+                            $next($error, null);
+                        }
+                    );
+                }
+                return $next(null, []);
+            }
             $this->_handle($value, $next, $depth);
         } catch (Throwable $throwable) {
             $callback($throwable, null);
@@ -323,7 +348,7 @@ class Async
         }
     }
 
-    private function handleCommand(Generator $flow, $value, callable $callback, int $depth): bool
+    private function handleCommands(Generator $flow, &$value, callable $callback, int $depth): bool
     {
         $commands = $this->parse($flow->key());
         if ($value instanceof Throwable) {
@@ -340,17 +365,18 @@ class Async
                 $flow->parallel = [];
             }
             $flow->parallel [] = $value;
-            return true; //stop
+            return false; //continue
         }
 
         if (isset($commands[self::all])) {
             if (!isset($flow->parallel)) {
                 $callback(null, []);
-                return true;
+                return true; //stop
             }
             $this->_awaitAll($flow->parallel)->then(
-                function (array $all) use ($callback) {
-                    $callback(null, $all);
+                function (array $all) use ($flow, $callback, $depth) {
+                    $flow->send($all);
+                    $this->_handleGenerator($flow, $callback, $depth);
                 },
                 function ($err) use ($callback) {
                     $callback($err, false);

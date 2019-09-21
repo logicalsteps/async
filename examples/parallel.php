@@ -82,11 +82,11 @@ function async(Generator $flow, callable $callback)
     }
 }
 
-trace('start');
-async(flow(), function ($error, $result) {
-    var_dump($result);
-});
+//trace('start');
+//async(flow(), function ($error, $result) {
+//    var_dump($result);
+//});
 
-//Async::setLogger(new ConsoleLogger);
-//Async::await(flow());
+Async::setLogger(new ConsoleLogger);
+Async::await(flow());
 $loop->run();
