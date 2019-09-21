@@ -42,6 +42,8 @@ class Async
     const all = 'all';
     const await = 'await';
 
+    const ACTIONS = [self::await, self::parallel, self::all, self::promise];
+
     public static $knownPromises = [
         self::PROMISE_REACT,
         self::PROMISE_AMP,
@@ -290,12 +292,20 @@ class Async
                     $flow->parallel = [];
                 }
                 $flow->parallel[] = $value;
+                if (!isset($this->action)) {
+                    $this->action = [];
+                }
+                $this->action[] = self::parallel;
                 return $next(null, $value);
             }
             if (key_exists(self::all, $actions)) {
-                $processes = Async::parallel === $value && isset($flow->parallel) ? $flow->parallel : $value;
-                if (is_array($processes) && count($processes)) {
-                    return all(array_map([$this, '_handle'], $processes))->then(
+                $tasks = Async::parallel === $value && isset($flow->parallel) ? $flow->parallel : $value;
+                if (is_array($tasks) && count($tasks)) {
+                    $this->logger->info(
+                        sprintf("all {%d} tasks awaited.", count($tasks)),
+                        compact('depth')
+                    );
+                    return all(array_map([$this, '_handle'], $tasks))->then(
                         function ($result) use ($next) {
                             $next(null, $result);
                         },
@@ -410,6 +420,14 @@ class Async
         return $arr;
     }
 
+    private function action()
+    {
+        if (!empty($this->action)) {
+            return array_shift($this->action);
+        }
+        return self::await;
+    }
+
     private function logCallback(callable $callable, array $parameters, int $depth = 0)
     {
         if ($depth < 0 || !$this->logger) {
@@ -432,8 +450,10 @@ class Async
                 $name = '$callable';
             }
         }
-        $this->logger->info('await ' . $name . $this->format($parameters), compact('depth'));
-
+        $this->logger->info(
+            sprintf("%s %s%s", $this->action(), $name, $this->format($parameters)),
+            compact('depth')
+        );
     }
 
     private function logPromise($promise, string $interface, int $depth)
@@ -455,8 +475,10 @@ class Async
                 $type = 'amp';
                 break;
         }
-        $this->logger->info('await $' . $type . 'Promise;', compact('depth'));
-
+        $this->logger->info(
+            sprintf("%s \$%sPromise;", $this->action(), $type),
+            compact('depth')
+        );
     }
 
     private function logGenerator(Generator $generator, int $depth = 0)
@@ -491,6 +513,9 @@ class Async
         foreach ($function->getParameters() as $parameter) {
             $args[] = '$' . $parameter->name;
         }
-        $this->logger->info('await ' . $name . '(' . implode(', ', $args) . ');', compact('depth'));
+        $this->logger->info(
+            sprintf("%s %s(%s);", $this->action(), $name, implode(', ', $args)),
+            compact('depth')
+        );
     }
 }

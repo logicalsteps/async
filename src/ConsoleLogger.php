@@ -64,7 +64,9 @@ class ConsoleLogger extends AbstractLogger
                 break;
             default:
                 if ($this->consoleColors) {
-                    $message = str_replace('await ', $this->color('await ', 'brightGrey'), $message);
+                    foreach (Async::ACTIONS as $action) {
+                        $message = str_replace("$action ", $this->color("$action ", 'brightGrey'), $message);
+                    }
                 }
                 $depth = $context['depth'] ?? 0;
                 $depth = $depth
