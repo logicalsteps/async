@@ -64,7 +64,7 @@ function async(Generator $flow, callable $callback)
             return $next(null, $value);
         case Async::all:
             if (!isset($flow->parallel)) {
-                $next(null, $value);
+                return $next(null, $value);
             }
             return Async::awaitAll($flow->parallel)->then(
                 function ($result) use ($next) {
