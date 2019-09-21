@@ -7,6 +7,7 @@ use Closure;
 use Generator;
 use Psr\Log\LoggerInterface;
 use TypeError;
+use function Clue\StreamFilter\fun;
 use function React\Promise\all;
 use function GuzzleHttp\Promise\all as guzzleAll;
 use React\Promise\Promise;
@@ -193,8 +194,18 @@ class Async
         return [$promise, $resolver, $rejector];
     }
 
-    protected function _handle($process, callable $callback, int $depth = 0)
+    protected function _handle($process, callable $callback = null, int $depth = 0)
     {
+        $promise = null;
+        if (!$callback) {
+            list($promise, $resolver, $rejector) = $this->makePromise();
+            $callback = function ($error, $result) use ($resolver, $rejector) {
+                if ($error) {
+                    return $rejector($error);
+                }
+                $resolver($result);
+            };
+        }
         $arguments = [];
         $func = [];
         if (is_array($process) && count($process) > 1) {
@@ -219,6 +230,7 @@ class Async
         } else {
             $callback(null, $process);
         }
+        return $promise;
     }
 
 
@@ -265,10 +277,10 @@ class Async
                     if (isset($actions['throw']) && is_a($value, $actions['throw'])) {
                         $flow->throw($value);
                         $this->_handleGenerator($flow, $callback, $depth);
-                        return true; //stop
+                        return;
                     }
                     $callback($value, null);
-                    return true; //stop
+                    return;
                 }
                 $flow->send($value);
                 $this->_handleGenerator($flow, $callback, $depth);
@@ -283,7 +295,7 @@ class Async
             if (key_exists(self::all, $actions)) {
                 $processes = Async::parallel === $value && isset($flow->parallel) ? $flow->parallel : $value;
                 if (is_array($processes) && count($processes)) {
-                    return $this->_awaitAll($processes)->then(
+                    return all(array_map([$this, '_handle'], $processes))->then(
                         function ($result) use ($next) {
                             $next(null, $result);
                         },
