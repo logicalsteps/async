@@ -315,11 +315,13 @@ class Async
             if (key_exists(self::all, $actions)) {
                 $tasks = Async::parallel === $value && isset($flow->parallel) ? $flow->parallel : $value;
                 unset($flow->parallel);
-                if ($this->logger && is_array($tasks) && count($tasks)) {
-                    $this->logger->info(
-                        sprintf("all {%d} tasks awaited.", count($tasks)),
-                        compact('depth')
-                    );
+                if (is_array($tasks) && count($tasks)) {
+                    if ($this->logger) {
+                        $this->logger->info(
+                            sprintf("all {%d} tasks awaited.", count($tasks)),
+                            compact('depth')
+                        );
+                    }
                     return all(array_map([$this, '_handle'], $tasks))->then(
                         function ($result) use ($next) {
                             $next(null, $result);
