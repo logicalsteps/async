@@ -18,8 +18,15 @@ function wait(int $delay, callable $call_back)
     });
 }
 
+function great($name)
+{
+    yield;
+    echo "hello $name\n";
+}
+
 function flow()
 {
+    yield Async::later => great('Arul');
     yield ['wait', 2];
     yield Async::parallel => ['wait', 3];
     yield Async::parallel => ['wait', 5];

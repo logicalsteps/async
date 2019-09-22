@@ -6,10 +6,6 @@ namespace LogicalSteps\Async;
 use Closure;
 use Generator;
 use Psr\Log\LoggerInterface;
-use TypeError;
-use function Clue\StreamFilter\fun;
-use function React\Promise\all;
-use function GuzzleHttp\Promise\all as guzzleAll;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use ReflectionException;
@@ -19,6 +15,9 @@ use ReflectionGenerator;
 use ReflectionMethod;
 use ReflectionObject;
 use Throwable;
+use TypeError;
+use function GuzzleHttp\Promise\all as guzzleAll;
+use function React\Promise\all;
 
 /**
  * @method static PromiseInterface await($process) await for the completion of an asynchronous process
@@ -41,8 +40,9 @@ class Async
     const parallel = 'parallel';
     const all = 'all';
     const await = 'await';
+    const later = 'later';
 
-    const ACTIONS = [self::await, self::parallel, self::all, self::promise];
+    const ACTIONS = [self::await, self::parallel, self::all, self::promise, self::later];
 
     public static $knownPromises = [
         self::PROMISE_REACT,
@@ -269,6 +269,10 @@ class Async
         try {
             if (!$flow->valid()) {
                 $callback(null, $flow->getReturn());
+                if (!empty($flow->later)) {
+                    all(array_map([$this, '_handle'], $flow->later));
+                    unset($flow->later);
+                }
                 return;
             }
             $value = $flow->current();
@@ -287,6 +291,14 @@ class Async
                 $flow->send($value);
                 $this->_handleGenerator($flow, $callback, $depth);
             };
+            if (key_exists(self::later, $actions)) {
+                if (!isset($flow->later)) {
+                    $flow->later = [];
+                }
+                $this->logger->info('later task scheduled', compact('depth'));
+                $flow->later[] = $value;
+                return $next(null, $value);
+            }
             if (key_exists(self::parallel, $actions)) {
                 if (!isset($flow->parallel)) {
                     $flow->parallel = [];
@@ -300,6 +312,7 @@ class Async
             }
             if (key_exists(self::all, $actions)) {
                 $tasks = Async::parallel === $value && isset($flow->parallel) ? $flow->parallel : $value;
+                unset($flow->parallel);
                 if (is_array($tasks) && count($tasks)) {
                     $this->logger->info(
                         sprintf("all {%d} tasks awaited.", count($tasks)),
