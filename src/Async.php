@@ -48,7 +48,7 @@ class Async
         self::PROMISE_REACT,
         self::PROMISE_AMP,
         self::PROMISE_GUZZLE,
-        self::PROMISE_HTTP
+        self::PROMISE_HTTP,
     ];
 
     /**
@@ -295,7 +295,9 @@ class Async
                 if (!isset($flow->later)) {
                     $flow->later = [];
                 }
-                $this->logger->info('later task scheduled', compact('depth'));
+                if ($this->logger) {
+                    $this->logger->info('later task scheduled', compact('depth'));
+                }
                 $flow->later[] = $value;
                 return $next(null, $value);
             }
@@ -313,7 +315,7 @@ class Async
             if (key_exists(self::all, $actions)) {
                 $tasks = Async::parallel === $value && isset($flow->parallel) ? $flow->parallel : $value;
                 unset($flow->parallel);
-                if (is_array($tasks) && count($tasks)) {
+                if ($this->logger && is_array($tasks) && count($tasks)) {
                     $this->logger->info(
                         sprintf("all {%d} tasks awaited.", count($tasks)),
                         compact('depth')
