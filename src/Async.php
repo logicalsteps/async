@@ -23,8 +23,14 @@ use function React\Promise\all;
  * @method static PromiseInterface await($process) await for the completion of an asynchronous process
  * @method PromiseInterface await($process) await for the completion of an asynchronous process
  *
+ * @method static void await($process, callable $callback) await for the completion of an asynchronous process
+ * @method void await($process, callable $callback) await for the completion of an asynchronous process
+ *
  * @method static PromiseInterface awaitAll(array $processes) concurrently await for multiple processes
  * @method PromiseInterface awaitAll(array $processes) concurrently await for multiple processes
+ *
+ * @method static void awaitAll(array $processes, callable $callback) concurrently await for multiple processes
+ * @method void awaitAll(array $processes, callable $callback) concurrently await for multiple processes
  *
  * @method static setLogger(LoggerInterface $param)
  * @method setLogger(LoggerInterface $param)
@@ -76,13 +82,42 @@ class Async
 
     public function __call($name, $arguments)
     {
+        $value = null;
         switch ($name) {
             case 'await':
             case 'awaitAll':
+                if ($this->logger) {
+                    $this->logger->info('start');
+                }
+                if (1 == count($arguments)) {
+                    //return promise
+                    list($value, $resolver, $rejector) = $this->makePromise();
+                    $callback = function ($error = null, $result = null) use ($resolver, $rejector) {
+                        if ($this->logger) {
+                            $this->logger->info('end');
+                        }
+                        if ($error) {
+                            return $rejector($error);
+                        }
+                        $resolver($result);
+                    };
+                    $arguments[1] = $callback;
+                } elseif ($this->logger) {
+                    $c = $arguments[1];
+                    $callback = function ($error, $result = null) use ($c) {
+                        $this->logger->info('end');
+                        $c($error, $result);
+                    };
+                    $arguments[1] = $callback;
+                }
             case 'setLogger':
-                return call_user_func_array([$this, "_$name"], $arguments);
+                $name = "_$name";
+                break;
+            default:
+                return null;
         }
-        return null;
+        call_user_func_array([$this, $name], $arguments);
+        return $value;
     }
 
     public static function __callStatic($name, $arguments)
@@ -140,18 +175,7 @@ class Async
         return __FUNCTION__;
     }
 
-    public function _awaitAll(array $processes): PromiseInterface
-    {
-        $this->parallelGuzzleLoading = true;
-        $promise = all(array_map([$this, '_await'], $processes));
-        if (!empty($this->guzzlePromises)) {
-            guzzleAll($this->guzzlePromises)->wait(false);
-            $this->guzzlePromises = [];
-        }
-        return $promise;
-    }
-
-    public function awaitAllCallback(array $processes, callable $callback): void
+    protected function _awaitAll(array $processes, callable $callback): void
     {
         $this->parallelGuzzleLoading = true;
         $results = [];
@@ -159,7 +183,7 @@ class Async
         foreach ($processes as $key => $process) {
             if ($failed)
                 break;
-            $c = function ($error, $result) use ($key, &$results, $processes, $callback, &$failed) {
+            $c = function ($error = null, $result = null) use ($key, &$results, $processes, $callback, &$failed) {
                 if ($failed)
                     return;
                 if ($error) {
@@ -172,7 +196,7 @@ class Async
                     $callback(null, $results);
                 }
             };
-            $this->awaitCallback($process, $c);
+            $this->_await($process, $c);
         }
         if (!empty($this->guzzlePromises)) {
             guzzleAll($this->guzzlePromises)->wait(false);
@@ -181,40 +205,9 @@ class Async
         }
     }
 
-    public function awaitCallback($process, callable $callback): void
+    public function _await($process, callable $callback): void
     {
-        $callback2 = $callback;
-        if ($this->logger) {
-            $this->logger->info('start');
-            $callback2 = function ($error, $result = null) use ($callback) {
-                $this->logger->info('end');
-                $callback($error, $result);
-            };
-        }
-        $this->_handle($process, $callback2, -1);
-    }
-
-    protected function _await($process): PromiseInterface
-    {
-        if ($this->logger) {
-            $this->logger->info('start');
-        }
-        list($promise, $resolver, $rejector) = $this->makePromise();
-        $callback = function ($error, $result = null) use ($resolver, $rejector) {
-            if ($error) {
-                if ($this->logger) {
-                    $this->logger->info('end');
-                }
-                $rejector($error);
-                return;
-            }
-            if ($this->logger) {
-                $this->logger->info('end');
-            }
-            $resolver($result);
-        };
         $this->_handle($process, $callback, -1);
-        return $promise;
     }
 
     /**
@@ -244,7 +237,7 @@ class Async
         $promise = null;
         if (!$callback) {
             list($promise, $resolver, $rejector) = $this->makePromise();
-            $callback = function ($error, $result) use ($resolver, $rejector) {
+            $callback = function ($error = null, $result = null) use ($resolver, $rejector) {
                 if ($error) {
                     return $rejector($error);
                 }
@@ -313,14 +306,15 @@ class Async
             if (!$flow->valid()) {
                 $callback(null, $flow->getReturn());
                 if (!empty($flow->later)) {
-                    all(array_map([$this, '_handle'], $flow->later));
+                    $this->_awaitAll($flow->later);
+                    //all(array_map([$this, '_handle'], $flow->later));
                     unset($flow->later);
                 }
                 return;
             }
             $value = $flow->current();
             $actions = $this->parse($flow->key() ?: Async::await);
-            $next = function ($error, $result) use ($flow, $actions, $callback, $depth) {
+            $next = function ($error = null, $result = null) use ($flow, $actions, $callback, $depth) {
                 $value = $error ?: $result;
                 if ($value instanceof Throwable) {
                     if (isset($actions['throw']) && is_a($value, $actions['throw'])) {
@@ -365,6 +359,8 @@ class Async
                             compact('depth')
                         );
                     }
+                    return $this->_awaitAll($tasks, $next);
+                    /*
                     return all(array_map([$this, '_handle'], $tasks))->then(
                         function ($result) use ($next) {
                             $next(null, $result);
@@ -373,6 +369,7 @@ class Async
                             $next($error, null);
                         }
                     );
+                    */
                 }
                 return $next(null, []);
             }
@@ -423,7 +420,7 @@ class Async
                 break;
             case static::PROMISE_AMP:
                 $knownPromise->onResolve(
-                    function ($error, $result) use ($resolver, $rejector) {
+                    function ($error = null, $result = null) use ($resolver, $rejector) {
                         $error ? $rejector($error) : $resolver($result);
                     });
                 break;
@@ -455,9 +452,9 @@ class Async
                 $callback(null, []);
                 return true; //stop
             }
-            $this->awaitAllCallback(
+            $this->_awaitAll(
                 $flow->parallel,
-                function ($error, $all) use ($flow, $callback, $depth) {
+                function ($error = null, $all = null) use ($flow, $callback, $depth) {
                     if ($error) {
                         $callback($error, false);
                         return;
@@ -466,17 +463,6 @@ class Async
                     $this->_handleGenerator($flow, $callback, $depth);
                 }
             );
-            /*
-            $this->_awaitAll($flow->parallel)->then(
-                function (array $all) use ($flow, $callback, $depth) {
-                    $flow->send($all);
-                    $this->_handleGenerator($flow, $callback, $depth);
-                },
-                function ($err) use ($callback) {
-                    $callback($err, false);
-                }
-            );
-            */
             return true; //stop
         }
 
@@ -488,7 +474,6 @@ class Async
         $arr = [];
         if (strlen($command)) {
             parse_str(str_replace(['|', ':'], ['&', '='], $command), $arr);
-            //$arr = array_map('str_getcsv', $arr);
         }
         return $arr;
     }
