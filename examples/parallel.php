@@ -37,13 +37,14 @@ function great($name)
 function flow()
 {
     yield Async::later => great('Arul');
-    yield ['wait', 2];
+    $result = yield ['wait', 2];
+    echo json_encode($result) . PHP_EOL;
     yield Async::parallel => ['wait', 3];
     yield Async::parallel => delay(5);
     $results = yield Async::all => Async::parallel;
-    var_dump($results);
-    $results = yield Async::all => [['wait', 2],delay(4)];
-    var_dump($results);
+    echo json_encode($results) . PHP_EOL;
+    $results = yield Async::all => [['wait', 2], delay(4)];
+    echo json_encode($results) . PHP_EOL;
     echo 'finished.' . PHP_EOL;
     return true;
 }
@@ -107,9 +108,9 @@ function async(Generator $flow, callable $callback)
 //    var_dump($result);
 //});
 
-//Async::setLogger(new ConsoleLogger);
-$async = new Async(new ConsoleLogger);
-$async->awaitCallback(flow(), function ($error, $result) {
-});
-//Async::await(flow());
+Async::setLogger(new ConsoleLogger);
+//$async = new Async(new ConsoleLogger);
+//$async->awaitCallback(flow(), function ($error, $result) {
+//});
+Async::await(flow());
 $loop->run();

@@ -11,6 +11,11 @@ function trace($response)
     echo json_encode($response) . PHP_EOL;
 }
 
+function trace_callback($error, $response)
+{
+    trace($response);
+}
+
 
 function status($url)
 {
@@ -21,6 +26,6 @@ function status($url)
 
 Async::setLogger(new ConsoleLogger);
 Async::await(status('http://httpbin.org/get'))->then('trace');
-Async::await(status('http://httpbin.org/missingPage'))->then('trace');
+Async::await(status('http://httpbin.org/missingPage'), 'trace_callback');
 
-Async::awaitAll([status('http://httpbin.org/get'),status('http://httpbin.org/missingPage')])->then('trace');
+Async::awaitAll([status('http://httpbin.org/get'), status('http://httpbin.org/missingPage')])->then('trace');
