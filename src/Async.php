@@ -151,6 +151,49 @@ class Async
         return $promise;
     }
 
+    public function awaitAllCallback(array $processes, callable $callback): void
+    {
+        $this->parallelGuzzleLoading = true;
+        $results = [];
+        $failed = false;
+        foreach ($processes as $key => $process) {
+            if ($failed)
+                break;
+            $c = function ($error, $result) use ($key, &$results, $processes, $callback, &$failed) {
+                if ($failed)
+                    return;
+                if ($error) {
+                    $failed = true;
+                    $callback($error);
+                    return;
+                }
+                $results[$key] = $result;
+                if (count($results) == count($processes)) {
+                    $callback(null, $results);
+                }
+            };
+            $this->awaitCallback($process, $c);
+        }
+        if (!empty($this->guzzlePromises)) {
+            guzzleAll($this->guzzlePromises)->wait(false);
+            $this->guzzlePromises = [];
+            $this->parallelGuzzleLoading = false;
+        }
+    }
+
+    public function awaitCallback($process, callable $callback): void
+    {
+        $callback2 = $callback;
+        if ($this->logger) {
+            $this->logger->info('start');
+            $callback2 = function ($error, $result = null) use ($callback) {
+                $this->logger->info('end');
+                $callback($error, $result);
+            };
+        }
+        $this->_handle($process, $callback2, -1);
+    }
+
     protected function _await($process): PromiseInterface
     {
         if ($this->logger) {
@@ -412,6 +455,18 @@ class Async
                 $callback(null, []);
                 return true; //stop
             }
+            $this->awaitAllCallback(
+                $flow->parallel,
+                function ($error, $all) use ($flow, $callback, $depth) {
+                    if ($error) {
+                        $callback($error, false);
+                        return;
+                    }
+                    $flow->send($all);
+                    $this->_handleGenerator($flow, $callback, $depth);
+                }
+            );
+            /*
             $this->_awaitAll($flow->parallel)->then(
                 function (array $all) use ($flow, $callback, $depth) {
                     $flow->send($all);
@@ -421,6 +476,7 @@ class Async
                     $callback($err, false);
                 }
             );
+            */
             return true; //stop
         }
 
