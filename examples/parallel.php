@@ -18,6 +18,16 @@ function wait(int $delay, callable $call_back)
     });
 }
 
+function delay(int $delay)
+{
+    global $loop;
+    $d = new React\Promise\Deferred();
+    $loop->addTimer($delay, function () use ($delay, $d) {
+        $d->resolve("waited for $delay");
+    });
+    return $d->promise();
+}
+
 function great($name)
 {
     yield;
@@ -29,8 +39,11 @@ function flow()
     yield Async::later => great('Arul');
     yield ['wait', 2];
     yield Async::parallel => ['wait', 3];
-    yield Async::parallel => ['wait', 5];
-    yield Async::all => Async::parallel;
+    yield Async::parallel => delay(5);
+    $results = yield Async::all => Async::parallel;
+    var_dump($results);
+    $results = yield Async::all => [['wait', 2],delay(4)];
+    var_dump($results);
     echo 'finished.' . PHP_EOL;
     return true;
 }
@@ -94,6 +107,9 @@ function async(Generator $flow, callable $callback)
 //    var_dump($result);
 //});
 
-Async::setLogger(new ConsoleLogger);
-Async::await(flow());
+//Async::setLogger(new ConsoleLogger);
+$async = new Async(new ConsoleLogger);
+$async->awaitCallback(flow(), function ($error, $result) {
+});
+//Async::await(flow());
 $loop->run();
