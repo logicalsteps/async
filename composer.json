@@ -32,17 +32,16 @@
         "issues": "https://github.com/logicalsteps/async/issues"
     },
     "require": {
-        "php": ">=7.0",
+        "php": ">=7.1",
         "psr/log": "^1.0",
         "ext-json": "*",
         "react/promise": "^2.7"
     },
     "require-dev": {
-        "pdepend/pdepend": "~2.5",
         "phploc/phploc": "~4.0",
-        "phpmd/phpmd": "~2.6",
+        "phpmd/phpmd": "^2.8",
         "phpunit/phpunit": "~7.3",
-        "scrutinizer/ocular": "~1.5",
+        "scrutinizer/ocular": "^1.7",
         "sebastian/phpcpd": "~4.1",
         "react/event-loop": "~1.0",
         "amphp/amp": "^2.0",
@@ -50,7 +49,8 @@
         "clue/buzz-react": "^2.4",
         "amphp/artax": "^3.0",
         "seregazhuk/react-promise-testing": "^0.2.1",
-        "psy/psysh": "^0.10.3"
+        "psy/psysh": "^0.10.3",
+        "pdepend/pdepend": "^2.7"
     },
     "autoload": {
         "psr-4": {
