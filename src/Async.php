@@ -232,18 +232,8 @@ class Async
         return [$promise, $resolver, $rejector];
     }
 
-    protected function _handle($process, callable $callback = null, int $depth = 0)
+    protected function _handle($process, callable $callback, int $depth = 0): void
     {
-        $promise = null;
-        if (!$callback) {
-            list($promise, $resolver, $rejector) = $this->makePromise();
-            $callback = function ($error = null, $result = null) use ($resolver, $rejector) {
-                if ($error) {
-                    return $rejector($error);
-                }
-                $resolver($result);
-            };
-        }
         $arguments = [];
         $func = [];
         if (is_array($process) && count($process) > 1) {
@@ -268,7 +258,6 @@ class Async
         } else {
             $callback(null, $process);
         }
-        return $promise;
     }
 
 
@@ -306,8 +295,8 @@ class Async
             if (!$flow->valid()) {
                 $callback(null, $flow->getReturn());
                 if (!empty($flow->later)) {
-                    $this->_awaitAll($flow->later);
-                    //all(array_map([$this, '_handle'], $flow->later));
+                    $this->_awaitAll($flow->later, function ($error = null, $results = null) {
+                    });
                     unset($flow->later);
                 }
                 return;
@@ -360,16 +349,6 @@ class Async
                         );
                     }
                     return $this->_awaitAll($tasks, $next);
-                    /*
-                    return all(array_map([$this, '_handle'], $tasks))->then(
-                        function ($result) use ($next) {
-                            $next(null, $result);
-                        },
-                        function ($error) use ($next) {
-                            $next($error, null);
-                        }
-                    );
-                    */
                 }
                 return $next(null, []);
             }
