@@ -17,7 +17,6 @@ use ReflectionObject;
 use Throwable;
 use TypeError;
 use function GuzzleHttp\Promise\all as guzzleAll;
-use function React\Promise\all;
 
 /**
  * @method static PromiseInterface await($process) await for the completion of an asynchronous process
@@ -42,10 +41,15 @@ class Async
     const PROMISE_GUZZLE = 'GuzzleHttp\Promise\PromiseInterface';
     const PROMISE_HTTP = 'Http\Promise\Promise';
 
+    /** @var string action to return a promise instead of awaiting the response of the process. */
     const promise = 'promise';
+    /** @var string action to run current process side by side with the remainder of the process. */
     const parallel = 'parallel';
+    /** @var string action to await for all parallel processes previously to finish. */
     const all = 'all';
+    /** @var string action to await for current  processes to finish. this is the default action. */
     const await = 'await';
+    /** @var string action to run current process after finished executing the function. */
     const later = 'later';
 
     const ACTIONS = [self::await, self::parallel, self::all, self::promise, self::later];
@@ -83,6 +87,7 @@ class Async
     public function __call($name, $arguments)
     {
         $value = null;
+        $method = "_$name";
         switch ($name) {
             case 'await':
             case 'awaitAll':
@@ -99,7 +104,7 @@ class Async
                         if ($error) {
                             return $rejector($error);
                         }
-                        $resolver($result);
+                        return $resolver($result);
                     };
                     $arguments[1] = $callback;
                 } elseif ($this->logger) {
@@ -110,18 +115,25 @@ class Async
                     };
                     $arguments[1] = $callback;
                 }
+                if ('await' == $name) {
+                    $arguments[2] = -1;//depth
+                    $method = '_handle';
+                }
+                break;
             case 'setLogger':
-                $name = "_$name";
                 break;
             default:
                 return null;
         }
-        call_user_func_array([$this, $name], $arguments);
+        call_user_func_array([$this, $method], $arguments);
         return $value;
     }
 
     public static function __callStatic($name, $arguments)
     {
+        if (empty($arguments) && in_array($name, self::ACTIONS)) {
+            return $name;
+        }
         static $instance;
         if (!$instance) {
             $instance = new static();
@@ -145,36 +157,6 @@ class Async
         throw new TypeError('Invalid value for throwable, it must extend Throwable class');
     }
 
-    /**
-     * Run this side by side with the remainder of the process
-     *
-     * @return string
-     */
-    public static function parallel(): string
-    {
-        return __FUNCTION__;
-    }
-
-    /**
-     * Await for all parallel processes previously to finish
-     *
-     * @return string
-     */
-    public static function all(): string
-    {
-        return __FUNCTION__;
-    }
-
-    /**
-     * Return a promise instead of awaiting the response of the process
-     *
-     * @return string
-     */
-    public static function promise(): string
-    {
-        return __FUNCTION__;
-    }
-
     protected function _awaitAll(array $processes, callable $callback): void
     {
         $this->parallelGuzzleLoading = true;
@@ -196,18 +178,13 @@ class Async
                     $callback(null, $results);
                 }
             };
-            $this->_await($process, $c);
+            $this->_handle($process, $c, -1);
         }
         if (!empty($this->guzzlePromises)) {
             guzzleAll($this->guzzlePromises)->wait(false);
             $this->guzzlePromises = [];
-            $this->parallelGuzzleLoading = false;
         }
-    }
-
-    public function _await($process, callable $callback): void
-    {
-        $this->_handle($process, $callback, -1);
+        $this->parallelGuzzleLoading = false;
     }
 
     /**
@@ -307,6 +284,7 @@ class Async
                 $value = $error ?: $result;
                 if ($value instanceof Throwable) {
                     if (isset($actions['throw']) && is_a($value, $actions['throw'])) {
+                        /** @scrutinizer ignore-call */
                         $flow->throw($value);
                         $this->_handleGenerator($flow, $callback, $depth);
                         return;
@@ -366,7 +344,6 @@ class Async
      * @param callable $callback
      * @param int $depth
      * @return void
-     * @throws \Exception
      */
     protected function _handlePromise($knownPromise, string $interface, callable $callback, int $depth = 0)
     {
@@ -377,32 +354,36 @@ class Async
         $rejector = function ($error) use ($callback) {
             $callback($error, null);
         };
-        switch ($interface) {
-            case static::PROMISE_REACT:
-                $knownPromise->then($resolver, $rejector);
-                break;
-            case static::PROMISE_GUZZLE:
-                $knownPromise->then($resolver, $rejector);
-                if ($this->waitForGuzzleAndHttplug) {
-                    if ($this->parallelGuzzleLoading) {
-                        $this->guzzlePromises[] = $knownPromise;
-                    } else {
+        try {
+            switch ($interface) {
+                case static::PROMISE_REACT:
+                    $knownPromise->then($resolver, $rejector);
+                    break;
+                case static::PROMISE_GUZZLE:
+                    $knownPromise->then($resolver, $rejector);
+                    if ($this->waitForGuzzleAndHttplug) {
+                        if ($this->parallelGuzzleLoading) {
+                            $this->guzzlePromises[] = $knownPromise;
+                        } else {
+                            $knownPromise->wait(false);
+                        }
+                    }
+                    break;
+                case static::PROMISE_HTTP:
+                    $knownPromise->then($resolver, $rejector);
+                    if ($this->waitForGuzzleAndHttplug) {
                         $knownPromise->wait(false);
                     }
-                }
-                break;
-            case static::PROMISE_HTTP:
-                $knownPromise->then($resolver, $rejector);
-                if ($this->waitForGuzzleAndHttplug) {
-                    $knownPromise->wait(false);
-                }
-                break;
-            case static::PROMISE_AMP:
-                $knownPromise->onResolve(
-                    function ($error = null, $result = null) use ($resolver, $rejector) {
-                        $error ? $rejector($error) : $resolver($result);
-                    });
-                break;
+                    break;
+                case static::PROMISE_AMP:
+                    $knownPromise->onResolve(
+                        function ($error = null, $result = null) use ($resolver, $rejector) {
+                            $error ? $rejector($error) : $resolver($result);
+                        });
+                    break;
+            }
+        } catch (\Exception $e) {
+            $rejector($e);
         }
     }
 
@@ -493,11 +474,12 @@ class Async
         );
     }
 
-    private function logPromise($promise, string $interface, int $depth)
+    private function logPromise(/** @scrutinizer ignore-unused */ $promise, string $interface, int $depth)
     {
         if ($depth < 0 || !$this->logger) {
             return;
         }
+        $type = 'unknown';
         switch ($interface) {
             case static::PROMISE_REACT:
                 $type = 'react';
