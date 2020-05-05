@@ -13,7 +13,6 @@ use Http\Promise\RejectedPromise as HttplugRejectedPromise;
 use LogicalSteps\Async\Async;
 use React\Promise\Promise as ReactPromise;
 use React\Promise\PromiseInterface;
-use seregazhuk\React\PromiseTesting\TestCase;
 
 class AsyncTest extends TestCase
 {
