@@ -6,6 +6,8 @@ namespace LogicalSteps\Async;
 use Closure;
 use Generator;
 use Psr\Log\LoggerInterface;
+use React\EventLoop\LoopInterface;
+use Amp\Loop\Driver;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use ReflectionException;
@@ -19,6 +21,9 @@ use TypeError;
 use function GuzzleHttp\Promise\all as guzzleAll;
 
 /**
+ * @method static mixed wait($process, LoopInterface|Driver $loop = null) synchronously wait for the completion of an asynchronous process
+ * @method mixed wait($process, LoopInterface|Driver $loop = null) synchronously wait for the completion of an asynchronous process
+ *
  * @method static PromiseInterface await($process) await for the completion of an asynchronous process
  * @method PromiseInterface await($process) await for the completion of an asynchronous process
  *
@@ -122,6 +127,8 @@ class Async
                 break;
             case 'setLogger':
                 break;
+            case 'wait':
+                return call_user_func_array([$this, $method], $arguments);
             default:
                 return null;
         }
@@ -207,6 +214,49 @@ class Async
             $rejector = $reject;
         });
         return [$promise, $resolver, $rejector];
+    }
+
+    protected function _wait($process, $loop = null)
+    {
+        if ($this->logger) {
+            $this->logger->info('start');
+        }
+        $waiting = true;
+        $result = null;
+        $exception = null;
+        $isRejected = false;
+
+        $callback = function ($error = null, $r = null) use (&$result, &$waiting, &$isRejected, &$exception, $loop) {
+            $waiting = false;
+            if ($loop) {
+                $loop->stop();
+            }
+            if ($error) {
+                $isRejected = true;
+                $exception = $error;
+                return;
+            }
+            $result = $r;
+        };
+        $this->_handle($process, $callback, -1);
+        while ($waiting) {
+            if ($loop) {
+                $loop->run();
+            }
+        }
+        if ($this->logger) {
+            $this->logger->info('end');
+        }
+        if ($isRejected) {
+            if (!$exception instanceof \Exception) {
+                $exception = new \UnexpectedValueException(
+                    'process failed with ' . (is_object($exception) ? get_class($exception) : gettype($exception))
+                );
+            }
+            throw $exception;
+        }
+
+        return $result;
     }
 
     protected function _handle($process, callable $callback, int $depth = 0): void

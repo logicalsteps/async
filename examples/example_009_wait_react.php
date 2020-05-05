@@ -12,6 +12,7 @@ function trace($response)
     echo json_encode($response) . PHP_EOL;
 }
 
+
 $loop = Factory::create();
 $browser = (new Browser($loop))->withOptions(['streaming' => true, 'obeySuccessCode' => false]);
 
@@ -20,10 +21,8 @@ $status = function ($url) use ($browser) {
     return $response->getStatusCode();
 };
 
+$async = new Async(new ConsoleLogger);
+trace($async->wait($status('http://httpbin.org/get'), $loop));
 Async::setLogger(new ConsoleLogger);
-Async::await($status('http://httpbin.org/get'))->then('trace');
-Async::await($status('http://httpbin.org/missingPage'))->then('trace');
-
-//Async::awaitAll([$status('http://httpbin.org/get'), $status('http://httpbin.org/missingPage')])->then('trace');
-
+trace(Async::wait($status('http://httpbin.org/missingPage'), $loop));
 $loop->run();
