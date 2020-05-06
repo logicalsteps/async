@@ -20,8 +20,12 @@ $status = function ($url) use ($client) {
     $response = yield $client->request(new Request($url));
     return $response->getStatus();
 };
-$async = new Async(new ConsoleLogger());
-trace($async->wait($status('http://httpbin.org/get'), Loop::get()));
+
+$async = new Async(new ConsoleLogger, Loop::get());
+trace($async->wait($status('http://httpbin.org/get')));
+
 Async::setLogger(new ConsoleLogger);
-trace(Async::wait($status('http://httpbin.org/missingPage'), Loop::get()));
+Async::setEventLoop(Loop::get());
+trace(Async::wait($status('http://httpbin.org/missingPage')));
+
 Loop::run();

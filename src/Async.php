@@ -21,8 +21,8 @@ use TypeError;
 use function GuzzleHttp\Promise\all as guzzleAll;
 
 /**
- * @method static mixed wait($process, LoopInterface|Driver $loop = null) synchronously wait for the completion of an asynchronous process
- * @method mixed wait($process, LoopInterface|Driver $loop = null) synchronously wait for the completion of an asynchronous process
+ * @method static mixed wait($process) synchronously wait for the completion of an asynchronous process
+ * @method mixed wait($process) synchronously wait for the completion of an asynchronous process
  *
  * @method static PromiseInterface await($process) await for the completion of an asynchronous process
  * @method PromiseInterface await($process) await for the completion of an asynchronous process
@@ -36,8 +36,11 @@ use function GuzzleHttp\Promise\all as guzzleAll;
  * @method static void awaitAll(array $processes, callable $callback) concurrently await for multiple processes
  * @method void awaitAll(array $processes, callable $callback) concurrently await for multiple processes
  *
- * @method static setLogger(?LoggerInterface $param)
- * @method setLogger(?LoggerInterface $param)
+ * @method static setLogger(LoggerInterface|null $logger)
+ * @method setLogger(LoggerInterface|null $logger)
+ *
+ * @method static setEventLoop(LoopInterface|Driver|null $loop)
+ * @method setEventLoop(LoopInterface|Driver|null $loop)
  */
 class Async
 {
@@ -67,9 +70,16 @@ class Async
     ];
 
     /**
-     * @var LoggerInterface
+     * @var LoggerInterface|null
      */
-    public $logger;
+    protected $logger;
+
+    /**
+     * @var LoopInterface|Driver|null;
+     */
+    protected $loop;
+
+
     /**
      * @var bool
      */
@@ -85,12 +95,12 @@ class Async
     /**
      * Async constructor.
      * @param LoggerInterface|null $logger
+     * @param LoopInterface|Driver|null $eventLoop optional. required when using reactphp or amphp
      */
-    public function __construct(?LoggerInterface $logger = null)
+    public function __construct(?LoggerInterface $logger = null, $eventLoop = null)
     {
-        if ($logger) {
-            $this->logger = $logger;
-        }
+        $this->logger = $logger;
+        $this->loop = $eventLoop;
     }
 
     public function __call($name, $arguments)
@@ -130,6 +140,7 @@ class Async
                 }
                 break;
             case 'setLogger':
+            case 'setEventLoop':
                 break;
             case 'wait':
                 return call_user_func_array([$this, $method], $arguments);
@@ -210,6 +221,18 @@ class Async
         $this->logger = $logger;
     }
 
+    /**
+     * Sets a logger instance on the object.
+     *
+     * @param LoopInterface|Driver|null $loop
+     *
+     * @return void
+     */
+    protected function _setEventLoop($loop)
+    {
+        $this->loop = $loop;
+    }
+
     private function makePromise()
     {
         $resolver = $rejector = null;
@@ -220,7 +243,7 @@ class Async
         return [$promise, $resolver, $rejector];
     }
 
-    protected function _wait($process, $loop = null)
+    protected function _wait($process)
     {
         if ($this->logger) {
             $this->logger->info('start');
@@ -230,10 +253,10 @@ class Async
         $exception = null;
         $isRejected = false;
 
-        $callback = function ($error = null, $r = null) use (&$result, &$waiting, &$isRejected, &$exception, $loop) {
+        $callback = function ($error = null, $r = null) use (&$result, &$waiting, &$isRejected, &$exception) {
             $waiting = false;
-            if ($loop) {
-                $loop->stop();
+            if ($this->loop) {
+                $this->loop->stop();
             }
             if ($error) {
                 $isRejected = true;
@@ -244,8 +267,8 @@ class Async
         };
         $this->_handle($process, $callback, -1);
         while ($waiting) {
-            if ($loop) {
-                $loop->run();
+            if ($this->loop) {
+                $this->loop->run();
             }
         }
         if ($this->logger) {
