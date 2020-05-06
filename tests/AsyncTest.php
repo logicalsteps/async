@@ -4,6 +4,7 @@ namespace LogicalSteps\Async\Test;
 
 use Amp\Success as AmpSuccess;
 use Amp\Failure as AmpFailure;
+use Clue\React\Buzz\Browser;
 use Error;
 use Exception;
 use GuzzleHttp\Promise\FulfilledPromise as GuzzleFulfilledPromise;
@@ -11,11 +12,19 @@ use GuzzleHttp\Promise\RejectedPromise as GuzzleRejectedPromise;
 use Http\Promise\FulfilledPromise as HttplugFulfilledPromise;
 use Http\Promise\RejectedPromise as HttplugRejectedPromise;
 use LogicalSteps\Async\Async;
+use Psr\Log\NullLogger;
+use React\EventLoop\Factory;
 use React\Promise\Promise as ReactPromise;
 use React\Promise\PromiseInterface;
+use function foo\func;
 
 class AsyncTest extends TestCase
 {
+    public function setUp(): void
+    {
+        Async::setLogger(new NullLogger);
+        parent::setUp();
+    }
 
     public function testAwaitForSynchronousValue()
     {
@@ -59,6 +68,20 @@ class AsyncTest extends TestCase
         $promise = Async::await(gen());
         $this->assertInstanceOf(PromiseInterface::class, $promise);
         $this->assertPromiseFulfillsWith($promise, 28);
+    }
+
+    public function testAwaitForGeneratorInsideGeneratorWithAnInstance()
+    {
+        function gen2()
+        {
+            $num = yield gen();
+            return 2 * $num;
+        }
+
+        $async = new Async(new NullLogger);
+        $promise = $async->await(gen2());
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertPromiseFulfillsWith($promise, 56);
     }
 
     public function testAwaitForGeneratorException()
@@ -167,6 +190,26 @@ class AsyncTest extends TestCase
             $this->assertEquals('failed httplug_promise', $error);
         });
         $this->assertPromiseRejects($promise);
+    }
+
+    public function testAwaitAllForReactPromises()
+    {
+        $loop = Factory::create();
+        $browser = (new Browser($loop))->withOptions(['streaming' => true, 'obeySuccessCode' => false]);
+
+        $status = function ($url) use ($browser) {
+            $response = yield $browser->get($url);
+            return $response->getStatusCode();
+        };
+        Async::awaitAll(
+            [$status('http://httpbin.org/get'), $status('http://httpbin.org/missingPage')],
+            function ($error = null, $result = null) use ($loop) {
+                $this->assertEquals(2, count($result));
+                $loop->stop();
+            }
+        );
+
+        $loop->run();
     }
 
 }
