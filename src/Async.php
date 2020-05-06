@@ -100,7 +100,7 @@ class Async
     public function __construct(?LoggerInterface $logger = null, $eventLoop = null)
     {
         $this->logger = $logger;
-        $this->loop = $eventLoop;
+        $this->_setEventLoop($eventLoop);
     }
 
     public function __call($name, $arguments)
@@ -230,6 +230,10 @@ class Async
      */
     protected function _setEventLoop($loop)
     {
+        if ($loop && !($loop instanceof LoopInterface || $loop instanceof Driver)) {
+            throw new TypeError('Argument 1 passed to LogicalSteps/Async/Async::_setEventLoop() must be ' .
+                'an instance of React\EventLoop\LoopInterface or use Amp\Loop\Driver or null.');
+        }
         $this->loop = $loop;
     }
 
