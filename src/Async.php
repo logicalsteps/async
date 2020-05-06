@@ -36,8 +36,8 @@ use function GuzzleHttp\Promise\all as guzzleAll;
  * @method static void awaitAll(array $processes, callable $callback) concurrently await for multiple processes
  * @method void awaitAll(array $processes, callable $callback) concurrently await for multiple processes
  *
- * @method static setLogger(LoggerInterface $param)
- * @method setLogger(LoggerInterface $param)
+ * @method static setLogger(?LoggerInterface $param)
+ * @method setLogger(?LoggerInterface $param)
  */
 class Async
 {
@@ -69,7 +69,7 @@ class Async
     /**
      * @var LoggerInterface
      */
-    protected $logger;
+    public $logger;
     /**
      * @var bool
      */
@@ -82,7 +82,11 @@ class Async
 
     protected $guzzlePromises = [];
 
-    public function __construct(LoggerInterface $logger = null)
+    /**
+     * Async constructor.
+     * @param LoggerInterface|null $logger
+     */
+    public function __construct(?LoggerInterface $logger = null)
     {
         if ($logger) {
             $this->logger = $logger;
@@ -197,11 +201,11 @@ class Async
     /**
      * Sets a logger instance on the object.
      *
-     * @param LoggerInterface $logger
+     * @param LoggerInterface|null $logger
      *
      * @return void
      */
-    protected function _setLogger(LoggerInterface $logger)
+    protected function _setLogger(?LoggerInterface $logger)
     {
         $this->logger = $logger;
     }
