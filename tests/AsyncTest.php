@@ -204,7 +204,8 @@ class AsyncTest extends TestCase
         Async::awaitAll(
             [$status('http://httpbin.org/get'), $status('http://httpbin.org/missingPage')],
             function ($error = null, $result = null) use ($loop) {
-                $this->assertEquals(2, count($result));
+                $this->assertContainsOnly('int', $result);
+                $this->assertCount(2, $result);
                 $loop->stop();
             }
         );
@@ -212,4 +213,65 @@ class AsyncTest extends TestCase
         $loop->run();
     }
 
+    public function testWaitForReactPromiseInGenerator()
+    {
+        $loop = Factory::create();
+        $browser = (new Browser($loop))->withOptions(['streaming' => true, 'obeySuccessCode' => false]);
+
+        $status = function ($url) use ($browser) {
+            $response = yield $browser->get($url);
+            return $response->getStatusCode();
+        };
+        Async::setEventLoop($loop);
+        $result = Async::wait($status('http://httpbin.org/get'));
+        $this->assertEquals(200, $result);
+    }
+
+    public function testWrongEventLoopType()
+    {
+        $this->expectException(\TypeError::class);
+        Async::setEventLoop(new NullLogger);
+    }
+
+    public function testWaitForManyReactPromisesInGenerator()
+    {
+        $loop = Factory::create();
+        $browser = (new Browser($loop))->withOptions(['streaming' => true, 'obeySuccessCode' => false]);
+
+        $status = function ($url) use ($browser) {
+            $response = yield $browser->get($url);
+            return $response->getStatusCode();
+        };
+        $together = function () use ($status) {
+            return yield Async::all => [$status('http://httpbin.org/get'), $status('http://httpbin.org/missingPage')];
+        };
+        Async::setEventLoop($loop);
+        $result = Async::wait($together());
+        $this->assertContainsOnly('int', $result);
+        $this->assertCount(2, $result);
+    }
+
+    public function testWaitForParallelReactPromisesInGenerator()
+    {
+        $loop = Factory::create();
+        $browser = (new Browser($loop))->withOptions(['streaming' => true, 'obeySuccessCode' => false]);
+
+        $status = function ($url) use ($browser) {
+            $response = yield $browser->get($url);
+            return $response->getStatusCode();
+        };
+        $together = function () use ($status) {
+            yield Async::later => function(){
+                yield;
+                var_dump('completed later');
+            };
+            yield Async::parallel => $status('http://httpbin.org/get');
+            yield Async::parallel => $status('http://httpbin.org/missingPage');
+            return yield Async::all => Async::parallel;
+        };
+        Async::setEventLoop($loop);
+        $result = Async::wait($together());
+        $this->assertContainsOnly('int', $result);
+        $this->assertCount(2, $result);
+    }
 }
