@@ -468,48 +468,6 @@ class Async
         }
     }
 
-    private function handleCommands(Generator $flow, &$value, callable $callback, int $depth): bool
-    {
-        $commands = $this->parse($flow->key());
-        if ($value instanceof Throwable) {
-            if (isset($commands['throw']) && is_a($value, $commands['throw'])) {
-                $flow->throw($value);
-                $this->_handleGenerator($flow, $callback, $depth);
-                return true; //stop
-            }
-            $callback($value, null);
-            return true; //stop
-        }
-        if (isset($commands[self::parallel])) {
-            if (!isset($flow->parallel)) {
-                $flow->parallel = [];
-            }
-            $flow->parallel [] = $value;
-            return false; //continue
-        }
-
-        if (isset($commands[self::all])) {
-            if (!isset($flow->parallel)) {
-                $callback(null, []);
-                return true; //stop
-            }
-            $this->_awaitAll(
-                $flow->parallel,
-                function ($error = null, $all = null) use ($flow, $callback, $depth) {
-                    if ($error) {
-                        $callback($error, false);
-                        return;
-                    }
-                    $flow->send($all);
-                    $this->_handleGenerator($flow, $callback, $depth);
-                }
-            );
-            return true; //stop
-        }
-
-        return false; //continue
-    }
-
     private function parse(string $command): array
     {
         $arr = [];
