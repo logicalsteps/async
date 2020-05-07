@@ -2,25 +2,20 @@
 
 namespace LogicalSteps\Async\Test;
 
-use PHPUnit\Framework\AssertionFailedError;
-use PHPUnit\Framework\TestCase as PHPUnitTestCase;
-use React\Promise\PromiseInterface;
-use React\EventLoop\LoopInterface;
-use React\EventLoop\Factory as LoopFactory;
-use React\Promise\Timer\TimeoutException;
 use Clue\React\Block;
 use Exception;
+use PHPUnit\Framework\AssertionFailedError;
+use PHPUnit\Framework\TestCase as PHPUnitTestCase;
+use React\EventLoop\Factory as LoopFactory;
+use React\EventLoop\LoopInterface;
+use React\Promise\PromiseInterface;
+use React\Promise\Timer\TimeoutException;
 
 class TestCase extends PHPUnitTestCase
 {
     private const DEFAULT_WAIT_TIMEOUT = 2;
 
     private $loop;
-
-    protected function setUp(): void
-    {
-        $this->loop = LoopFactory::create();
-    }
 
     /**
      * @param PromiseInterface $promise
@@ -39,6 +34,15 @@ class TestCase extends PHPUnitTestCase
         } catch (Exception $exception) {
             $this->fail($failMessage . 'Promise was rejected.');
         }
+    }
+
+    /**
+     * @return mixed
+     * @throws Exception
+     */
+    public function waitForPromise(PromiseInterface $promise, int $timeout = null)
+    {
+        return Block\await($promise, $this->loop, $timeout ?: self::DEFAULT_WAIT_TIMEOUT);
     }
 
     /**
@@ -67,8 +71,11 @@ class TestCase extends PHPUnitTestCase
     /**
      * @throws AssertionFailedError
      */
-    public function assertPromiseFulfillsWithInstanceOf(PromiseInterface $promise, string $class, int $timeout = null): void
-    {
+    public function assertPromiseFulfillsWithInstanceOf(
+        PromiseInterface $promise,
+        string $class,
+        int $timeout = null
+    ): void {
         $failMessage = "Failed asserting that promise fulfills with a value of class $class. ";
         $result = null;
         $this->addToAssertionCount(1);
@@ -107,13 +114,18 @@ class TestCase extends PHPUnitTestCase
      * @param string $reasonExceptionClass
      * @param int|null $timeout
      */
-    public function assertPromiseRejectsWith(PromiseInterface $promise, string $reasonExceptionClass, int $timeout = null): void
-    {
+    public function assertPromiseRejectsWith(
+        PromiseInterface $promise,
+        string $reasonExceptionClass,
+        int $timeout = null
+    ): void {
         try {
             $this->waitForPromise($promise, $timeout);
         } catch (Exception $reason) {
             $this->assertInstanceOf(
-                $reasonExceptionClass, $reason, 'Failed asserting that promise rejects with a specified reason.'
+                $reasonExceptionClass,
+                $reason,
+                'Failed asserting that promise rejects with a specified reason.'
             );
         }
 
@@ -135,17 +147,13 @@ class TestCase extends PHPUnitTestCase
         }
     }
 
-    /**
-     * @return mixed
-     * @throws Exception
-     */
-    public function waitForPromise(PromiseInterface $promise, int $timeout = null)
-    {
-        return Block\await($promise, $this->loop, $timeout ?: self::DEFAULT_WAIT_TIMEOUT);
-    }
-
     public function eventLoop(): LoopInterface
     {
         return $this->loop;
+    }
+
+    protected function setUp(): void
+    {
+        $this->loop = LoopFactory::create();
     }
 }

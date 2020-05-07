@@ -20,7 +20,7 @@ $status = function ($url) use ($browser) {
     return $response->getStatusCode();
 };
 
-Async::setLogger(new ConsoleLogger);
+Async::setLogger(new ConsoleLogger());
 Async::await($status('http://httpbin.org/get'))->then('trace');
 Async::await($status('http://httpbin.org/missingPage'))->then('trace');
 

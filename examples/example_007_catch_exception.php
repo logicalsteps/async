@@ -1,8 +1,7 @@
 <?php
 
-use LogicalSteps\Async\Async;
 use LogicalSteps\Async\Action;
-use LogicalSteps\Async\ConsoleLogger;
+use LogicalSteps\Async\Async;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -36,6 +35,9 @@ function run()
 
 //Async::setLogger(new ConsoleLogger);
 
-Async::await(run())->then('var_dump', function (Throwable $t) {
-    echo get_class($t) . ': ' . $t->getMessage() . PHP_EOL;
-});
+Async::await(run())->then(
+    'var_dump',
+    function (Throwable $t) {
+        echo get_class($t) . ': ' . $t->getMessage() . PHP_EOL;
+    }
+);

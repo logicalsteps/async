@@ -23,7 +23,7 @@ function status($url)
     return $response->getStatusCode();
 }
 
-$async = new Async(new ConsoleLogger);
+$async = new Async(new ConsoleLogger());
 trace($async->wait(status('http://httplug.io')));
-Async::setLogger(new ConsoleLogger);
+Async::setLogger(new ConsoleLogger());
 trace(Async::wait(status('http://httplug.io/missingPage')));

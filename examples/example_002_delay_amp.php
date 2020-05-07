@@ -9,40 +9,52 @@ require __DIR__ . '/../vendor/autoload.php';
 
 function two_seconds(callable $call_back)
 {
-    Loop::delay(2000, function () use ($call_back) {
-        $call_back(null, true);
-    });
+    Loop::delay(
+        2000,
+        function () use ($call_back) {
+            $call_back(null, true);
+        }
+    );
 }
 
 class Timer
 {
-    static function delay(int $seconds, callable $call_back)
+    public static function delay(int $seconds, callable $call_back)
     {
-        Loop::delay($seconds * 1000, function () use ($call_back) {
-            $call_back(null, true);
-        });
+        Loop::delay(
+            $seconds * 1000,
+            function () use ($call_back) {
+                $call_back(null, true);
+            }
+        );
     }
 
-    function wait(int $seconds, callable $call_back)
+    public function wait(int $seconds, callable $call_back)
     {
-        Loop::delay($seconds * 1000, function () use ($call_back) {
-            $call_back(null, true);
-        });
+        Loop::delay(
+            $seconds * 1000,
+            function () use ($call_back) {
+                $call_back(null, true);
+            }
+        );
     }
 
-    function hold(int $seconds)
+    public function hold(int $seconds)
     {
         yield [$this, 'wait', $seconds];
 
         return true;
     }
 
-    function promise(int $seconds)
+    public function promise(int $seconds)
     {
         $differed = new Deferred();
-        Loop::delay($seconds * 1000, function () use ($differed, $seconds) {
-            $differed->resolve($seconds);
-        });
+        Loop::delay(
+            $seconds * 1000,
+            function () use ($differed, $seconds) {
+                $differed->resolve($seconds);
+            }
+        );
 
         return $differed->promise();
     }

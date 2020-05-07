@@ -14,43 +14,55 @@ $loop = Factory::create();
 function two_seconds(callable $call_back)
 {
     global $loop;
-    $loop->addTimer(2, function () use ($call_back) {
-        $call_back(null, true);
-    });
+    $loop->addTimer(
+        2,
+        function () use ($call_back) {
+            $call_back(null, true);
+        }
+    );
 }
 
 class Timer
 {
-    static function delay(int $seconds, callable $call_back)
+    public static function delay(int $seconds, callable $call_back)
     {
         global $loop;
-        $loop->addTimer($seconds, function () use ($call_back) {
-            $call_back(null, true);
-        });
+        $loop->addTimer(
+            $seconds,
+            function () use ($call_back) {
+                $call_back(null, true);
+            }
+        );
     }
 
-    function wait(int $seconds, callable $call_back)
+    public function wait(int $seconds, callable $call_back)
     {
         global $loop;
-        $loop->addTimer($seconds, function () use ($call_back) {
-            $call_back(null, true);
-        });
+        $loop->addTimer(
+            $seconds,
+            function () use ($call_back) {
+                $call_back(null, true);
+            }
+        );
     }
 
-    function hold(int $seconds)
+    public function hold(int $seconds)
     {
         yield [$this, 'wait', $seconds];
 
         return true;
     }
 
-    function promise(int $seconds)
+    public function promise(int $seconds)
     {
         global $loop;
         $differed = new Deferred();
-        $loop->addTimer($seconds, function () use ($differed, $seconds) {
-            $differed->resolve($seconds);
-        });
+        $loop->addTimer(
+            $seconds,
+            function () use ($differed, $seconds) {
+                $differed->resolve($seconds);
+            }
+        );
 
         return $differed->promise();
     }
@@ -73,7 +85,7 @@ function flow()
     return yield $timer->hold(7);
 }
 
-Async::setLogger(new ConsoleLogger);
+Async::setLogger(new ConsoleLogger());
 Async::await(flow());
 //Async::await(flow()); //run another session in parallel
 

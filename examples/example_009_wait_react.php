@@ -21,10 +21,10 @@ $status = function ($url) use ($browser) {
     return $response->getStatusCode();
 };
 
-$async = new Async(new ConsoleLogger, $loop);
+$async = new Async(new ConsoleLogger(), $loop);
 trace($async->wait($status('http://httpbin.org/get')));
 
-Async::setLogger(new ConsoleLogger);
+Async::setLogger(new ConsoleLogger());
 Async::setEventLoop($loop);
 trace(Async::wait($status('http://httpbin.org/missingPage')));
 

@@ -27,4 +27,4 @@ $async = new Async(new ConsoleLogger());
 $async->await(status('http://httplug.io'))->then('trace');
 $async->await(status('http://httplug.io/missingPage'))->then('trace');
 
-$async->awaitAll([status('http://httplug.io'),status('http://httplug.io/missingPage')])->then('trace');
+$async->awaitAll([status('http://httplug.io'), status('http://httplug.io/missingPage')])->then('trace');

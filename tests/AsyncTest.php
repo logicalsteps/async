@@ -2,8 +2,8 @@
 
 namespace LogicalSteps\Async\Test;
 
-use Amp\Success as AmpSuccess;
 use Amp\Failure as AmpFailure;
+use Amp\Success as AmpSuccess;
 use Clue\React\Buzz\Browser;
 use Error;
 use Exception;
@@ -16,13 +16,13 @@ use Psr\Log\NullLogger;
 use React\EventLoop\Factory;
 use React\Promise\Promise as ReactPromise;
 use React\Promise\PromiseInterface;
-use function foo\func;
+use TypeError;
 
 class AsyncTest extends TestCase
 {
     public function setUp(): void
     {
-        Async::setLogger(new NullLogger);
+        Async::setLogger(new NullLogger());
         parent::setUp();
     }
 
@@ -52,9 +52,11 @@ class AsyncTest extends TestCase
 
         $promise = Async::await($callable);
         $this->assertInstanceOf(PromiseInterface::class, $promise);
-        $promise->then(function ($value, $error) {
-            $this->assertEquals('failed callback', $error);
-        });
+        $promise->then(
+            function ($value, $error) {
+                $this->assertEquals('failed callback', $error);
+            }
+        );
         $this->assertPromiseRejects($promise);
     }
 
@@ -78,7 +80,7 @@ class AsyncTest extends TestCase
             return 2 * $num;
         }
 
-        $async = new Async(new NullLogger);
+        $async = new Async(new NullLogger());
         $promise = $async->await(gen2());
         $this->assertInstanceOf(PromiseInterface::class, $promise);
         $this->assertPromiseFulfillsWith($promise, 56);
@@ -94,17 +96,21 @@ class AsyncTest extends TestCase
 
         $promise = Async::await(genF());
         $this->assertInstanceOf(PromiseInterface::class, $promise);
-        $promise->then(function ($value, $error) {
-            $this->assertEquals('failed generator', $error);
-        });
+        $promise->then(
+            function ($value, $error) {
+                $this->assertEquals('failed generator', $error);
+            }
+        );
         $this->assertPromiseRejects($promise);
     }
 
     public function testAwaitForReactPromise()
     {
-        $knownPromise = new ReactPromise(function ($resolver) {
-            $resolver('react_promise');
-        });
+        $knownPromise = new ReactPromise(
+            function ($resolver) {
+                $resolver('react_promise');
+            }
+        );
 
         $promise = Async::await($knownPromise);
         $this->assertInstanceOf(PromiseInterface::class, $promise);
@@ -113,15 +119,19 @@ class AsyncTest extends TestCase
 
     public function testAwaitForFailedReactPromise()
     {
-        $knownPromise = new ReactPromise(function ($resolver, $canceller) {
-            $canceller('failed react_promise');
-        });
+        $knownPromise = new ReactPromise(
+            function ($resolver, $canceller) {
+                $canceller('failed react_promise');
+            }
+        );
 
         $promise = Async::await($knownPromise);
         $this->assertInstanceOf(PromiseInterface::class, $promise);
-        $promise->then(function ($value, $error) {
-            $this->assertEquals('failed react_promise', $error);
-        });
+        $promise->then(
+            function ($value, $error) {
+                $this->assertEquals('failed react_promise', $error);
+            }
+        );
         $this->assertPromiseRejects($promise);
     }
 
@@ -140,9 +150,11 @@ class AsyncTest extends TestCase
 
         $promise = Async::await($knownPromise);
         $this->assertInstanceOf(PromiseInterface::class, $promise);
-        $promise->then(function ($value, $error) {
-            $this->assertEquals('failed amp_promise', $error);
-        });
+        $promise->then(
+            function ($value, $error) {
+                $this->assertEquals('failed amp_promise', $error);
+            }
+        );
         $this->assertPromiseRejects($promise);
     }
 
@@ -151,9 +163,11 @@ class AsyncTest extends TestCase
         $knownPromise = new GuzzleFulfilledPromise('guzzle_promise');
 
         $promise = Async::await($knownPromise);
-        $promise->then(function ($value) {
-            $this->assertEquals('guzzle_promise', $value);
-        });
+        $promise->then(
+            function ($value) {
+                $this->assertEquals('guzzle_promise', $value);
+            }
+        );
         $this->assertInstanceOf(PromiseInterface::class, $promise);
     }
 
@@ -163,9 +177,11 @@ class AsyncTest extends TestCase
 
         $promise = Async::await($knownPromise);
         $this->assertInstanceOf(PromiseInterface::class, $promise);
-        $promise->then(function ($value, $error) {
-            $this->assertEquals('failed guzzle_promise', $error);
-        });
+        $promise->then(
+            function ($value, $error) {
+                $this->assertEquals('failed guzzle_promise', $error);
+            }
+        );
         $this->assertPromiseRejects($promise);
     }
 
@@ -174,9 +190,11 @@ class AsyncTest extends TestCase
         $knownPromise = new HttplugFulfilledPromise('httplug_promise');
 
         $promise = Async::await($knownPromise);
-        $promise->then(function ($value) {
-            $this->assertEquals('httplug_promise', $value);
-        });
+        $promise->then(
+            function ($value) {
+                $this->assertEquals('httplug_promise', $value);
+            }
+        );
         $this->assertInstanceOf(PromiseInterface::class, $promise);
     }
 
@@ -186,9 +204,11 @@ class AsyncTest extends TestCase
 
         $promise = Async::await($knownPromise);
         $this->assertInstanceOf(PromiseInterface::class, $promise);
-        $promise->then(function ($value, $error) {
-            $this->assertEquals('failed httplug_promise', $error);
-        });
+        $promise->then(
+            function ($value, $error) {
+                $this->assertEquals('failed httplug_promise', $error);
+            }
+        );
         $this->assertPromiseRejects($promise);
     }
 
@@ -229,8 +249,8 @@ class AsyncTest extends TestCase
 
     public function testWrongEventLoopType()
     {
-        $this->expectException(\TypeError::class);
-        Async::setEventLoop(new NullLogger);
+        $this->expectException(TypeError::class);
+        Async::setEventLoop(new NullLogger());
     }
 
     public function testWaitForManyReactPromisesInGenerator()
@@ -261,7 +281,7 @@ class AsyncTest extends TestCase
             return $response->getStatusCode();
         };
         $together = function () use ($status) {
-            yield Async::later => function(){
+            yield Async::later => function () {
                 yield;
                 var_dump('completed later');
             };

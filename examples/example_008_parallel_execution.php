@@ -13,18 +13,24 @@ $loop = Factory::create();
 function wait(int $delay, callable $call_back)
 {
     global $loop;
-    $loop->addTimer($delay, function () use ($delay, $call_back) {
-        $call_back(null, "waited for $delay");
-    });
+    $loop->addTimer(
+        $delay,
+        function () use ($delay, $call_back) {
+            $call_back(null, "waited for $delay");
+        }
+    );
 }
 
 function delay(int $delay)
 {
     global $loop;
     $d = new React\Promise\Deferred();
-    $loop->addTimer($delay, function () use ($delay, $d) {
-        $d->resolve("waited for $delay");
-    });
+    $loop->addTimer(
+        $delay,
+        function () use ($delay, $d) {
+            $d->resolve("waited for $delay");
+        }
+    );
     return $d->promise();
 }
 
@@ -108,7 +114,7 @@ function async(Generator $flow, callable $callback)
 //    var_dump($result);
 //});
 
-Async::setLogger(new ConsoleLogger);
+Async::setLogger(new ConsoleLogger());
 //$async = new Async(new ConsoleLogger);
 //$async->awaitCallback(flow(), function ($error, $result) {
 //});

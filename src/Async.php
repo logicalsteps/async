@@ -18,6 +18,7 @@ use ReflectionMethod;
 use ReflectionObject;
 use Throwable;
 use TypeError;
+
 use function GuzzleHttp\Promise\all as guzzleAll;
 
 /**
@@ -129,7 +130,9 @@ class Async
                 } elseif ($this->logger) {
                     $c = $arguments[1];
                     $callback = function ($error, $result = null) use ($c) {
-                        $this->logger->info('end');
+                        if ($this->logger) {
+                            $this->logger->info('end');
+                        }
                         $c($error, $result);
                     };
                     $arguments[1] = $callback;
@@ -185,11 +188,13 @@ class Async
         $results = [];
         $failed = false;
         foreach ($processes as $key => $process) {
-            if ($failed)
+            if ($failed) {
                 break;
+            }
             $c = function ($error = null, $result = null) use ($key, &$results, $processes, $callback, &$failed) {
-                if ($failed)
+                if ($failed) {
                     return;
+                }
                 if ($error) {
                     $failed = true;
                     $callback($error);
@@ -231,8 +236,10 @@ class Async
     protected function _setEventLoop($loop)
     {
         if ($loop && !($loop instanceof LoopInterface || $loop instanceof Driver)) {
-            throw new TypeError('Argument 1 passed to LogicalSteps/Async/Async::_setEventLoop() must be ' .
-                'an instance of React\EventLoop\LoopInterface or use Amp\Loop\Driver or null.');
+            throw new TypeError(
+                'Argument 1 passed to LogicalSteps/Async/Async::_setEventLoop() must be ' .
+                'an instance of React\EventLoop\LoopInterface or use Amp\Loop\Driver or null.'
+            );
         }
         $this->loop = $loop;
     }
@@ -240,10 +247,12 @@ class Async
     private function makePromise()
     {
         $resolver = $rejector = null;
-        $promise = new Promise(function ($resolve, $reject, $notify) use (&$resolver, &$rejector) {
-            $resolver = $resolve;
-            $rejector = $reject;
-        });
+        $promise = new Promise(
+            function ($resolve, $reject, $notify) use (&$resolver, &$rejector) {
+                $resolver = $resolve;
+                $rejector = $reject;
+            }
+        );
         return [$promise, $resolver, $rejector];
     }
 
@@ -310,8 +319,10 @@ class Async
             $this->_handleCallback($func, $arguments, $callback, $depth);
         } elseif ($process instanceof Generator) {
             $this->_handleGenerator($process, $callback, 1 + $depth);
-        } elseif (is_object($process) && $implements = array_intersect(class_implements($process),
-                Async::$knownPromises)) {
+        } elseif (is_object($process) && $implements = array_intersect(
+                class_implements($process),
+                Async::$knownPromises
+            )) {
             $this->_handlePromise($process, array_shift($implements), $callback, $depth);
         } else {
             $callback(null, $process);
@@ -353,8 +364,11 @@ class Async
             if (!$flow->valid()) {
                 $callback(null, $flow->getReturn());
                 if (!empty($flow->later)) {
-                    $this->_awaitAll($flow->later, function ($error = null, $results = null) {
-                    });
+                    $this->_awaitAll(
+                        $flow->later,
+                        function ($error = null, $results = null) {
+                        }
+                    );
                     unset($flow->later);
                 }
                 return;
@@ -460,7 +474,8 @@ class Async
                     $knownPromise->onResolve(
                         function ($error = null, $result = null) use ($resolver, $rejector) {
                             $error ? $rejector($error) : $resolver($result);
-                        });
+                        }
+                    );
                     break;
             }
         } catch (\Exception $e) {
@@ -497,7 +512,6 @@ class Async
             } else {
                 $name .= '::' . $callable[1];
             }
-
         } else {
             if (is_string($callable)) {
                 $name = $callable;

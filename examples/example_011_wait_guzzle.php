@@ -17,7 +17,8 @@ function status($url)
     $response = yield $client->getAsync($url);
     return $response->getStatusCode();
 }
-$async =  new Async(new ConsoleLogger);
+
+$async = new Async(new ConsoleLogger());
 trace($async->wait(status('http://httpbin.org/get')));
-Async::setLogger(new ConsoleLogger);
+Async::setLogger(new ConsoleLogger());
 trace(Async::wait(status('http://httpbin.org/missingPage')));
