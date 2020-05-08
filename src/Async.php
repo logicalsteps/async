@@ -3,11 +3,12 @@
 namespace LogicalSteps\Async;
 
 
+use Amp\Loop\Driver;
 use Closure;
+use Exception;
 use Generator;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
-use Amp\Loop\Driver;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use ReflectionException;
@@ -18,6 +19,7 @@ use ReflectionMethod;
 use ReflectionObject;
 use Throwable;
 use TypeError;
+use UnexpectedValueException;
 
 use function GuzzleHttp\Promise\all as guzzleAll;
 
@@ -45,23 +47,23 @@ use function GuzzleHttp\Promise\all as guzzleAll;
  */
 class Async
 {
-    const PROMISE_REACT = 'React\Promise\PromiseInterface';
-    const PROMISE_AMP = 'Amp\Promise';
-    const PROMISE_GUZZLE = 'GuzzleHttp\Promise\PromiseInterface';
-    const PROMISE_HTTP = 'Http\Promise\Promise';
+    public const PROMISE_REACT = 'React\Promise\PromiseInterface';
+    public const PROMISE_AMP = 'Amp\Promise';
+    public const PROMISE_GUZZLE = 'GuzzleHttp\Promise\PromiseInterface';
+    public const PROMISE_HTTP = 'Http\Promise\Promise';
 
     /** @var string action to return a promise instead of awaiting the response of the process. */
-    const promise = 'promise';
+    public const promise = 'promise';
     /** @var string action to run current process side by side with the remainder of the process. */
-    const parallel = 'parallel';
+    public const parallel = 'parallel';
     /** @var string action to await for all parallel processes previously to finish. */
-    const all = 'all';
+    public const all = 'all';
     /** @var string action to await for current  processes to finish. this is the default action. */
-    const await = 'await';
+    public const await = 'await';
     /** @var string action to run current process after finished executing the function. */
-    const later = 'later';
+    public const later = 'later';
 
-    const ACTIONS = [self::await, self::parallel, self::all, self::promise, self::later];
+    public const ACTIONS = [self::await, self::parallel, self::all, self::promise, self::later];
 
     public static $knownPromises = [
         self::PROMISE_REACT,
@@ -288,8 +290,8 @@ class Async
             $this->logger->info('end');
         }
         if ($isRejected) {
-            if (!$exception instanceof \Exception) {
-                $exception = new \UnexpectedValueException(
+            if (!$exception instanceof Exception) {
+                $exception = new UnexpectedValueException(
                     'process failed with ' . (is_object($exception) ? get_class($exception) : gettype($exception))
                 );
             }
@@ -434,7 +436,7 @@ class Async
     /**
      * Handle known promise interfaces
      *
-     * @param \React\Promise\PromiseInterface|\GuzzleHttp\Promise\PromiseInterface|\Amp\Promise|\Http\Promise\Promise $knownPromise
+     * @param PromiseInterface|\GuzzleHttp\Promise\PromiseInterface|\Amp\Promise|\Http\Promise\Promise $knownPromise
      * @param string $interface
      * @param callable $callback
      * @param int $depth
@@ -478,7 +480,7 @@ class Async
                     );
                     break;
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $rejector($e);
         }
     }
@@ -512,14 +514,12 @@ class Async
             } else {
                 $name .= '::' . $callable[1];
             }
+        } elseif (is_string($callable)) {
+            $name = $callable;
+        } elseif ($callable instanceof Closure) {
+            $name = '$closure';
         } else {
-            if (is_string($callable)) {
-                $name = $callable;
-            } elseif ($callable instanceof Closure) {
-                $name = '$closure';
-            } else {
-                $name = '$callable';
-            }
+            $name = '$callable';
         }
         $this->logger->info(
             sprintf("%s %s%s", $this->action(), $name, $this->format($parameters)),
