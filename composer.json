@@ -34,10 +34,10 @@
     "require": {
         "php": ">=7.2",
         "psr/log": "^1.0",
-        "ext-json": "*"
+        "ext-json": "*",
+        "react/promise": "^2.8"
     },
     "require-dev": {
-        "react/promise": "^2.7",
         "phploc/phploc": "~4.0",
         "phpmd/phpmd": "^2.8",
         "phpunit/phpunit": "~7.3",
