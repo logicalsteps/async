@@ -2,8 +2,8 @@
 
 namespace LogicalSteps\Async\Test;
 
-use Clue\React\Block;
 use Exception;
+use LogicalSteps\Async\Async;
 use PHPUnit\Framework\AssertionFailedError;
 use PHPUnit\Framework\TestCase as PHPUnitTestCase;
 use React\EventLoop\Factory as LoopFactory;
@@ -22,11 +22,10 @@ class TestCase extends PHPUnitTestCase
      * @param int|null $timeout seconds to wait for resolving
      * @throws AssertionFailedError
      */
-    public function assertPromiseFulfills(PromiseInterface $promise, int $timeout = null): void
+    public function assertPromiseFulfills($promise, int $timeout = null): void
     {
         $failMessage = 'Failed asserting that promise fulfills. ';
         $this->addToAssertionCount(1);
-
         try {
             $this->waitForPromise($promise, $timeout);
         } catch (TimeoutException $exception) {
@@ -37,12 +36,25 @@ class TestCase extends PHPUnitTestCase
     }
 
     /**
+     * @param $promise
+     * @param int|null $timeout
      * @return mixed
-     * @throws Exception
      */
-    public function waitForPromise(PromiseInterface $promise, int $timeout = null)
+    public function waitForPromise($promise, int $timeout = null)
     {
-        return Block\await($promise, $this->loop, $timeout ?: self::DEFAULT_WAIT_TIMEOUT);
+        if ($timeout) {
+            echo 'adding timeout ' . $timeout . PHP_EOL;
+            $this->loop->addTimer(
+                $timeout,
+                function () use ($promise, $timeout) {
+                    var_dump($timeout);
+                    $promise->reject(new TimeoutException($timeout . ' seconds has passed.'));
+                }
+            );
+        }
+        $async = new Async(null, $this->loop);
+        $value = $async->wait($promise);
+        return $value;
     }
 
     /**
@@ -51,7 +63,7 @@ class TestCase extends PHPUnitTestCase
      * @param int|null $timeout
      * @throws AssertionFailedError
      */
-    public function assertPromiseFulfillsWith(PromiseInterface $promise, $value, int $timeout = null): void
+    public function assertPromiseFulfillsWith($promise, $value, int $timeout = null): void
     {
         $failMessage = 'Failed asserting that promise fulfills with a specified value. ';
         $result = null;
@@ -72,7 +84,7 @@ class TestCase extends PHPUnitTestCase
      * @throws AssertionFailedError
      */
     public function assertPromiseFulfillsWithInstanceOf(
-        PromiseInterface $promise,
+        $promise,
         string $class,
         int $timeout = null
     ): void {
@@ -96,7 +108,7 @@ class TestCase extends PHPUnitTestCase
      * @param int|null $timeout
      * @throws AssertionFailedError
      */
-    public function assertPromiseRejects(PromiseInterface $promise, int $timeout = null): void
+    public function assertPromiseRejects($promise, int $timeout = null): void
     {
         $this->addToAssertionCount(1);
 
@@ -115,7 +127,7 @@ class TestCase extends PHPUnitTestCase
      * @param int|null $timeout
      */
     public function assertPromiseRejectsWith(
-        PromiseInterface $promise,
+        $promise,
         string $reasonExceptionClass,
         int $timeout = null
     ): void {
@@ -137,7 +149,7 @@ class TestCase extends PHPUnitTestCase
      * @param int|null $timeout
      * @return mixed
      */
-    public function waitForPromiseToFulfill(PromiseInterface $promise, int $timeout = null)
+    public function waitForPromiseToFulfill($promise, int $timeout = null)
     {
         try {
             return $this->waitForPromise($promise, $timeout);

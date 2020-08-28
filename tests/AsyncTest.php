@@ -29,7 +29,7 @@ class AsyncTest extends TestCase
     public function testAwaitForSynchronousValue()
     {
         $promise = Async::await(7);
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertInstanceOf(Async::$promiseClass, $promise);
         $this->assertPromiseFulfillsWith($promise, 7);
     }
 
@@ -40,7 +40,7 @@ class AsyncTest extends TestCase
         };
 
         $promise = Async::await($callable);
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertInstanceOf(Async::$promiseClass, $promise);
         $this->assertPromiseFulfillsWith($promise, 14);
     }
 
@@ -51,7 +51,7 @@ class AsyncTest extends TestCase
         };
 
         $promise = Async::await($callable);
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertInstanceOf(Async::$promiseClass, $promise);
         $promise->then(
             function ($value, $error) {
                 $this->assertEquals('failed callback', $error);
@@ -68,7 +68,7 @@ class AsyncTest extends TestCase
         }
 
         $promise = Async::await(gen());
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertInstanceOf(Async::$promiseClass, $promise);
         $this->assertPromiseFulfillsWith($promise, 28);
     }
 
@@ -82,7 +82,7 @@ class AsyncTest extends TestCase
 
         $async = new Async(new NullLogger());
         $promise = $async->await(gen2());
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertInstanceOf(Async::$promiseClass, $promise);
         $this->assertPromiseFulfillsWith($promise, 56);
     }
 
@@ -95,7 +95,7 @@ class AsyncTest extends TestCase
         }
 
         $promise = Async::await(genF());
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertInstanceOf(Async::$promiseClass, $promise);
         $promise->then(
             function ($value, $error) {
                 $this->assertEquals('failed generator', $error);
@@ -113,7 +113,7 @@ class AsyncTest extends TestCase
         );
 
         $promise = Async::await($knownPromise);
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertInstanceOf(Async::$promiseClass, $promise);
         $this->assertPromiseFulfillsWith($promise, 'react_promise');
     }
 
@@ -126,7 +126,7 @@ class AsyncTest extends TestCase
         );
 
         $promise = Async::await($knownPromise);
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertInstanceOf(Async::$promiseClass, $promise);
         $promise->then(
             function ($value, $error) {
                 $this->assertEquals('failed react_promise', $error);
@@ -140,7 +140,7 @@ class AsyncTest extends TestCase
         $knownPromise = new AmpSuccess('amp_promise');
 
         $promise = Async::await($knownPromise);
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertInstanceOf(Async::$promiseClass, $promise);
         $this->assertPromiseFulfillsWith($promise, 'amp_promise');
     }
 
@@ -149,7 +149,7 @@ class AsyncTest extends TestCase
         $knownPromise = new AmpFailure(new Error('failed amp_promise'));
 
         $promise = Async::await($knownPromise);
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertInstanceOf(Async::$promiseClass, $promise);
         $promise->then(
             function ($value, $error) {
                 $this->assertEquals('failed amp_promise', $error);
@@ -168,7 +168,7 @@ class AsyncTest extends TestCase
                 $this->assertEquals('guzzle_promise', $value);
             }
         );
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertInstanceOf(Async::$promiseClass, $promise);
     }
 
     public function testAwaitForFailedGuzzlePromise()
@@ -176,7 +176,7 @@ class AsyncTest extends TestCase
         $knownPromise = new GuzzleRejectedPromise('failed guzzle_promise');
 
         $promise = Async::await($knownPromise);
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertInstanceOf(Async::$promiseClass, $promise);
         $promise->then(
             function ($value, $error) {
                 $this->assertEquals('failed guzzle_promise', $error);
@@ -195,7 +195,7 @@ class AsyncTest extends TestCase
                 $this->assertEquals('httplug_promise', $value);
             }
         );
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertInstanceOf(Async::$promiseClass, $promise);
     }
 
     public function testAwaitForFailedHttplugPromise()
@@ -203,7 +203,7 @@ class AsyncTest extends TestCase
         $knownPromise = new HttplugRejectedPromise(new Exception('failed httplug_promise'));
 
         $promise = Async::await($knownPromise);
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
+        $this->assertInstanceOf(Async::$promiseClass, $promise);
         $promise->then(
             function ($value, $error) {
                 $this->assertEquals('failed httplug_promise', $error);

@@ -36,8 +36,10 @@ function delay(int $delay)
 
 function great($name)
 {
-    yield;
+    //yield delay(10);
+    sleep(10);
     echo "hello $name\n";
+    yield delay(0);
 }
 
 function flow()

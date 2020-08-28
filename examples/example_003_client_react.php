@@ -20,6 +20,10 @@ $status = function ($url) use ($browser) {
     return $response->getStatusCode();
 };
 
+$async = new Async(null,$loop);
+$promise = $browser->get('http://httpbin.org/get');
+$value = $async->wait($promise);
+
 Async::setLogger(new ConsoleLogger());
 Async::await($status('http://httpbin.org/get'))->then('trace');
 Async::await($status('http://httpbin.org/missingPage'))->then('trace');

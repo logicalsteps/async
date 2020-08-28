@@ -9,7 +9,6 @@ use Exception;
 use Generator;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
-use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use ReflectionException;
 use ReflectionFunction;
@@ -47,6 +46,7 @@ use function GuzzleHttp\Promise\all as guzzleAll;
  */
 class Async
 {
+    public const PROMISE_ASYNC = Promise::class;
     public const PROMISE_REACT = 'React\Promise\PromiseInterface';
     public const PROMISE_AMP = 'Amp\Promise';
     public const PROMISE_GUZZLE = 'GuzzleHttp\Promise\PromiseInterface';
@@ -66,11 +66,14 @@ class Async
     public const ACTIONS = [self::await, self::parallel, self::all, self::promise, self::later];
 
     public static $knownPromises = [
+        self::PROMISE_ASYNC,
         self::PROMISE_REACT,
         self::PROMISE_AMP,
         self::PROMISE_GUZZLE,
         self::PROMISE_HTTP,
     ];
+
+    public static $promiseClass = Promise::class;
 
     /**
      * @var LoggerInterface|null
@@ -249,8 +252,9 @@ class Async
     private function makePromise()
     {
         $resolver = $rejector = null;
-        $promise = new Promise(
-            function ($resolve, $reject, $notify) use (&$resolver, &$rejector) {
+        $class = self::$promiseClass;
+        $promise = new $class(
+            function ($resolve, $reject) use (&$resolver, &$rejector) {
                 $resolver = $resolve;
                 $rejector = $reject;
             }
@@ -322,7 +326,7 @@ class Async
         } elseif ($process instanceof Generator) {
             $this->_handleGenerator($process, $callback, 1 + $depth);
         } elseif (is_object($process) && $implements = array_intersect(
-                class_implements($process),
+                [get_class($process)] + class_implements($process),
                 Async::$knownPromises
             )) {
             $this->_handlePromise($process, array_shift($implements), $callback, $depth);
@@ -453,6 +457,7 @@ class Async
         };
         try {
             switch ($interface) {
+                case static::PROMISE_ASYNC:
                 case static::PROMISE_REACT:
                     $knownPromise->then($resolver, $rejector);
                     break;
@@ -534,6 +539,9 @@ class Async
         }
         $type = 'unknown';
         switch ($interface) {
+            case static::PROMISE_ASYNC:
+                $type = 'async';
+                break;
             case static::PROMISE_REACT:
                 $type = 'react';
                 break;
