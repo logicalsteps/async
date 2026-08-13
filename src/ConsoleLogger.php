@@ -53,7 +53,7 @@ class ConsoleLogger extends AbstractLogger
      *
      * @return void
      */
-    public function log($level, $message, array $context = array())
+    public function log($level, $message, array $context = array()): void
     {
         switch ($message) {
             case 'start':

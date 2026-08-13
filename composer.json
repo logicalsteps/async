@@ -33,7 +33,7 @@
     },
     "require": {
         "php": ">=7.2",
-        "psr/log": "^1.0",
+        "psr/log": "^1.0 || ^2.0 || ^3.0",
         "ext-json": "*",
         "react/promise": "^2.8"
     },
