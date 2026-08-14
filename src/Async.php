@@ -96,6 +96,14 @@ class Async
     protected $guzzlePromises = [];
 
     /**
+     * State associated with generators being processed.
+     *
+     * Generator instances cannot safely receive dynamic properties on PHP 8.2+.
+     * @var array<string, array<string, mixed>>
+     */
+    protected $generatorState = [];
+
+    /**
      * Async constructor.
      * @param LoggerInterface|null $logger
      * @param LoopInterface|Driver|null $eventLoop optional. required when using reactphp or amphp
@@ -362,17 +370,19 @@ class Async
     protected function _handleGenerator(Generator $flow, callable $callback, int $depth = 0)
     {
         $this->logGenerator($flow, $depth - 1);
+        $generatorId = spl_object_hash($flow);
+        $state =& $this->generatorState[$generatorId];
         try {
             if (!$flow->valid()) {
                 $callback(null, $flow->getReturn());
-                if (!empty($flow->later)) {
+                if (!empty($state['later'])) {
                     $this->_awaitAll(
-                        $flow->later,
+                        $state['later'],
                         function ($error = null, $results = null) {
                         }
                     );
-                    unset($flow->later);
                 }
+                unset($this->generatorState[$generatorId]);
                 return;
             }
             $value = $flow->current();
@@ -393,20 +403,20 @@ class Async
                 $this->_handleGenerator($flow, $callback, $depth);
             };
             if (key_exists(self::later, $actions)) {
-                if (!isset($flow->later)) {
-                    $flow->later = [];
+                if (!isset($state['later'])) {
+                    $state['later'] = [];
                 }
                 if ($this->logger) {
                     $this->logger->info('later task scheduled', compact('depth'));
                 }
-                $flow->later[] = $value;
+                $state['later'][] = $value;
                 return $next(null, $value);
             }
             if (key_exists(self::parallel, $actions)) {
-                if (!isset($flow->parallel)) {
-                    $flow->parallel = [];
+                if (!isset($state['parallel'])) {
+                    $state['parallel'] = [];
                 }
-                $flow->parallel[] = $value;
+                $state['parallel'][] = $value;
                 if (!isset($this->action)) {
                     $this->action = [];
                 }
@@ -414,8 +424,8 @@ class Async
                 return $next(null, $value);
             }
             if (key_exists(self::all, $actions)) {
-                $tasks = Async::parallel === $value && isset($flow->parallel) ? $flow->parallel : $value;
-                unset($flow->parallel);
+                $tasks = Async::parallel === $value && isset($state['parallel']) ? $state['parallel'] : $value;
+                unset($state['parallel']);
                 if (is_array($tasks) && count($tasks)) {
                     if ($this->logger) {
                         $this->logger->info(
@@ -429,6 +439,7 @@ class Async
             }
             $this->_handle($value, $next, $depth);
         } catch (Throwable $throwable) {
+            unset($this->generatorState[$generatorId]);
             $callback($throwable, null);
         }
     }
