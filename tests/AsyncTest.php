@@ -4,7 +4,6 @@ namespace LogicalSteps\Async\Test;
 
 use Amp\Failure as AmpFailure;
 use Amp\Success as AmpSuccess;
-use Clue\React\Buzz\Browser;
 use Error;
 use Exception;
 use GuzzleHttp\Promise\FulfilledPromise as GuzzleFulfilledPromise;
@@ -14,9 +13,12 @@ use Http\Promise\RejectedPromise as HttplugRejectedPromise;
 use LogicalSteps\Async\Async;
 use Psr\Log\NullLogger;
 use React\EventLoop\Factory;
+use React\Http\Browser;
 use React\Promise\Promise as ReactPromise;
 use React\Promise\PromiseInterface;
+use RuntimeException;
 use TypeError;
+use UnexpectedValueException;
 
 class AsyncTest extends TestCase
 {
@@ -54,7 +56,8 @@ class AsyncTest extends TestCase
         $this->assertInstanceOf(PromiseInterface::class, $promise);
         $promise->then(
             function ($value, $error) {
-                $this->assertEquals('failed callback', $error);
+                $this->assertInstanceOf(UnexpectedValueException::class, $error);
+                $this->assertSame('failed callback', $error->getMessage());
             }
         );
         $this->assertPromiseRejects($promise);
@@ -121,7 +124,7 @@ class AsyncTest extends TestCase
     {
         $knownPromise = new ReactPromise(
             function ($resolver, $canceller) {
-                $canceller('failed react_promise');
+                $canceller(new RuntimeException('failed react_promise'));
             }
         );
 
@@ -129,7 +132,8 @@ class AsyncTest extends TestCase
         $this->assertInstanceOf(PromiseInterface::class, $promise);
         $promise->then(
             function ($value, $error) {
-                $this->assertEquals('failed react_promise', $error);
+                $this->assertInstanceOf(RuntimeException::class, $error);
+                $this->assertSame('failed react_promise', $error->getMessage());
             }
         );
         $this->assertPromiseRejects($promise);

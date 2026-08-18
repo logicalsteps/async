@@ -258,9 +258,16 @@ class Async
     {
         $resolver = $rejector = null;
         $promise = new Promise(
-            function ($resolve, $reject, $notify) use (&$resolver, &$rejector) {
+            function ($resolve, $reject) use (&$resolver, &$rejector) {
                 $resolver = $resolve;
-                $rejector = $reject;
+                $rejector = function ($reason) use ($reject) {
+                    if (!$reason instanceof Throwable) {
+                        $reason = new UnexpectedValueException(
+                            is_scalar($reason) || is_null($reason) ? (string)$reason : gettype($reason)
+                        );
+                    }
+                    $reject($reason);
+                };
             }
         );
         return [$promise, $resolver, $rejector];
